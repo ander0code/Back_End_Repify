@@ -6,7 +6,7 @@
 #   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
 from django.db import models
-
+from django.contrib.auth.models import User
 
 class Collaborations(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -80,7 +80,9 @@ class Users(models.Model):
     biography = models.TextField(blank=True, null=True)
     photo = models.TextField(blank=True, null=True)
     achievements = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(blank=True, null=True,auto_now_add=True)
+    authuser = models.OneToOneField(User, on_delete=models.CASCADE)
+    # Otros campos personalizados
 
     class Meta:
         managed = False
