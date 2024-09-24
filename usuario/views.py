@@ -218,21 +218,32 @@ class LoginViewSet(ViewSet):
         },
         tags=["User Management"]
     )
-    @action(detail=False, methods=['POST'], url_path='reset-password')
+    @action(detail=False, methods=['POST'], url_path='reset_password')
     def reset_password(self, request):
         email = request.data.get("email")
         reset_code = request.data.get("reset_code")
         new_password = request.data.get("new_password")
         
         try:
+            # Obtener el usuario por email desde auth_user
             user = User.objects.get(email=email)
-            if user.profile.reset_code == reset_code:  # Verificar el código
-                user.set_password(new_password)  # Cambiar la contraseña
-                user.profile.reset_code = None  # Limpiar el código
-                user.profile.save()
-                user.save()
+            
+            # Obtener el perfil del usuario
+            user_profile = Users.objects.get(authuser=user)
+
+            # Verificar si el código de restablecimiento es correcto
+            if user_profile.reset_code == reset_code:
+                # Cambiar la contraseña
+                user.set_password(new_password)
+                
+                # Limpiar el código de restablecimiento
+                user_profile.reset_code = None
+                user_profile.save()  # Guardar los cambios en el perfil
+                
                 return Response({"message": "Password successfully reset"}, status=status.HTTP_200_OK)
             else:
                 return Response({"error": "Invalid reset code"}, status=status.HTTP_400_BAD_REQUEST)
         except User.DoesNotExist:
             return Response({"error": "Invalid email"}, status=status.HTTP_400_BAD_REQUEST)
+        except Users.DoesNotExist:
+            return Response({"error": "User profile not found"}, status=status.HTTP_400_BAD_REQUEST)
