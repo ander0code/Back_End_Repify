@@ -10,6 +10,11 @@ from .serializers import LoginSerializer, CustomUserSerializer
 from rest_framework.decorators import action
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.core.mail import send_mail
+from django.conf import settings
+from usuario.models import Users
+
+import random
 
 
 # Create your views here.
@@ -46,12 +51,15 @@ class LoginViewSet(ViewSet):
         tags=["User Management"]
     )
     @action(detail=False, methods=['POST'],url_path='Login')
-    def login(self, request):
-        serializer = LoginSerializer(data=request.data)
-        if serializer.is_valid():
-            return Response(serializer.validated_data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+    def Login(self, request):
+        try:
+            serializer = LoginSerializer(data=request.data)
+            if serializer.is_valid():
+                return Response(serializer.validated_data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
     @swagger_auto_schema(
         operation_description="Register a new user and return JWT tokens",
         request_body=openapi.Schema(
@@ -129,3 +137,102 @@ class LoginViewSet(ViewSet):
             }, status=status.HTTP_201_CREATED)
         
         return Response(users_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @swagger_auto_schema(
+            operation_description="Request a password reset code",
+            request_body=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                required=['email'],
+                properties={
+                    'email': openapi.Schema(type=openapi.TYPE_STRING, description='User email to send the reset code'),
+                },
+            ),
+            responses={
+                200: openapi.Response('Password reset code sent', 
+                                    openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Success message'),
+                                    })),
+                400: openapi.Response('Invalid email', 
+                                    openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                                        'error': openapi.Schema(type=openapi.TYPE_STRING, description='Error message'),
+                                    })),
+            },
+            tags=["User Management"]
+        )
+    @action(detail=False, methods=['POST'], url_path='request-password-reset')
+    def request_password_reset(self, request):
+        email = request.data.get("email")
+
+        if not email:
+            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Obtener el usuario basado en el correo electrónico
+            user = User.objects.get(email=email)
+
+            # Generar un código de 6 dígitos
+            reset_code = random.randint(100000, 999999)
+
+            # Almacenar el código y la fecha en el modelo Users
+            user_profile = user.users  # Asegúrate de que tienes acceso al perfil del usuario
+            user_profile.reset_code = reset_code
+            user_profile.reset_code_created_at = timezone.now()
+            user_profile.save()
+
+            # Enviar el correo electrónico con el código de restablecimiento
+            send_mail(
+                'Password Reset Code',
+                f'Your password reset code is: {reset_code}',
+                'noreply@yourdomain.com',  # Cambia esto por tu dirección de correo
+                [email],
+                fail_silently=False,
+            )
+
+            return Response({"message": "Password reset code sent"}, status=status.HTTP_200_OK)
+
+        except User.DoesNotExist:
+            return Response({"error": "Invalid email"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    @swagger_auto_schema(
+        operation_description="Reset user password using a reset code",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['email', 'reset_code', 'new_password'],
+            properties={
+                'email': openapi.Schema(type=openapi.TYPE_STRING, description='User email'),
+                'reset_code': openapi.Schema(type=openapi.TYPE_INTEGER, description='Reset code sent to the user'),
+                'new_password': openapi.Schema(type=openapi.TYPE_STRING, description='New password for the user'),
+            },
+        ),
+        responses={
+            200: openapi.Response('Password successfully reset', 
+                                  openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                                      'message': openapi.Schema(type=openapi.TYPE_STRING, description='Success message'),
+                                  })),
+            400: openapi.Response('Invalid reset code or email', 
+                                  openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                                      'error': openapi.Schema(type=openapi.TYPE_STRING, description='Error message'),
+                                  })),
+        },
+        tags=["User Management"]
+    )
+    @action(detail=False, methods=['POST'], url_path='reset-password')
+    def reset_password(self, request):
+        email = request.data.get("email")
+        reset_code = request.data.get("reset_code")
+        new_password = request.data.get("new_password")
+        
+        try:
+            user = User.objects.get(email=email)
+            if user.profile.reset_code == reset_code:  # Verificar el código
+                user.set_password(new_password)  # Cambiar la contraseña
+                user.profile.reset_code = None  # Limpiar el código
+                user.profile.save()
+                user.save()
+                return Response({"message": "Password successfully reset"}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "Invalid reset code"}, status=status.HTTP_400_BAD_REQUEST)
+        except User.DoesNotExist:
+            return Response({"error": "Invalid email"}, status=status.HTTP_400_BAD_REQUEST)

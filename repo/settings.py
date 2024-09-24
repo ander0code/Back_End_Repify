@@ -151,3 +151,12 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),    # Duración del token de refresco
     'ROTATE_REFRESH_TOKENS': True,
 }
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'mttitop@autonoma.edu.pe'  # Tu dirección de correo de Gmail
+EMAIL_HOST_PASSWORD = '10391030'  # Tu contraseña de correo de Gmail
+DEFAULT_FROM_EMAIL = 'tmttitop@autonoma.edu.pe' 

@@ -83,6 +83,9 @@ class Users(models.Model):
     created_at = models.DateTimeField(blank=True, null=True,auto_now_add=True)
     authuser = models.OneToOneField(User, on_delete=models.CASCADE)
     # Otros campos personalizados
+    
+    reset_code = models.IntegerField(null=True, blank=True)  # Código de 6 dígitos
+    reset_code_created_at = models.DateTimeField(null=True, blank=True) 
 
     class Meta:
         managed = False
