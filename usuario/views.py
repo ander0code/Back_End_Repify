@@ -105,12 +105,14 @@ class LoginViewSet(ViewSet):
     def register(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
+        first_name = request.data.get("first_name") 
+        last_name = request.data.get("last_name")  
         
         if not email or not password:
             return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
         
         # Crear el usuario en auth_user
-        user = User.objects.create_user(username=email, email=email, password=password)
+        user = User.objects.create_user(username=email, email=email, password=password,first_name=first_name, last_name=last_name )
 
 
         # Ahora crea la entrada en la tabla Users
@@ -232,6 +234,7 @@ class LoginViewSet(ViewSet):
             if user_profile.reset_code == reset_code:
                 # Cambiar la contraseña
                 user.set_password(new_password)
+                user.save() 
                 
                 # Limpiar el código de restablecimiento
                 user_profile.reset_code = None
