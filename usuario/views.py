@@ -1,6 +1,5 @@
 from rest_framework.viewsets import ViewSet
 from django.contrib.auth.models import User
-from rest_framework.authtoken.models import Token
 from django.utils import timezone
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -8,10 +7,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import LoginSerializer, CustomUserSerializer
 from rest_framework.decorators import action
-from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
-from django.conf import settings
 from usuario.models import Users
 
 import random
@@ -250,3 +247,81 @@ class LoginViewSet(ViewSet):
             return Response({"error": "Invalid email"}, status=status.HTTP_400_BAD_REQUEST)
         except Users.DoesNotExist:
             return Response({"error": "User profile not found"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    @swagger_auto_schema(
+        operation_description="Update user profile by ID",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'university': openapi.Schema(type=openapi.TYPE_STRING, description='University of the user'),
+                'career': openapi.Schema(type=openapi.TYPE_STRING, description='Career of the user'),
+                'cycle': openapi.Schema(type=openapi.TYPE_STRING, description='Cycle of the user'),
+                'biography': openapi.Schema(type=openapi.TYPE_STRING, description='Biography of the user'),
+                'photo': openapi.Schema(type=openapi.TYPE_STRING, description='Photo URL of the user'),
+                'achievements': openapi.Schema(type=openapi.TYPE_STRING, description='Achievements of the user'),
+            },
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                'User profile updated successfully',
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'university': openapi.Schema(type=openapi.TYPE_STRING, description='University of the user'),
+                        'career': openapi.Schema(type=openapi.TYPE_STRING, description='Career of the user'),
+                        'cycle': openapi.Schema(type=openapi.TYPE_STRING, description='Cycle of the user'),
+                        'biography': openapi.Schema(type=openapi.TYPE_STRING, description='Biography of the user'),
+                        'photo': openapi.Schema(type=openapi.TYPE_STRING, description='Photo URL of the user'),
+                        'achievements': openapi.Schema(type=openapi.TYPE_STRING, description='Achievements of the user'),
+                    }
+                )
+            ),
+            status.HTTP_404_NOT_FOUND: openapi.Response('User not found'),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid input data'),
+        },
+        tags=["User Management"]
+    )
+    @action(detail=True, methods=['PUT'], url_path='update-profile')
+    def update_user_profile(self, request, pk=None):
+        try:
+            # Obtener el perfil de usuario usando el ID (pk)
+            user_profile = Users.objects.get(pk=pk)
+        except Users.DoesNotExist:
+            return Response({"error": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Crea un serializador con los datos actuales del perfil y los nuevos datos enviados
+        serializer = CustomUserSerializer(user_profile, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()  # Guarda las actualizaciones
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @swagger_auto_schema(
+        operation_description="Delete a user and their associated auth_user entry by ID",
+        responses={
+            status.HTTP_204_NO_CONTENT: openapi.Response('User and auth_user deleted successfully'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('User not found'),
+        },
+        tags=["User Management"]
+    )
+    @action(detail=True, methods=['DELETE'], url_path='delete-user')
+    def delete_user(self, request, pk=None):
+        try:
+            # Buscar al usuario en la tabla Users por su ID (pk)
+            user_profile = Users.objects.get(pk=pk)
+            
+            # Obtener el usuario en la tabla auth_user
+            auth_user = user_profile.authuser  # Asumiendo que 'authuser' es una FK a User
+
+        except Users.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Eliminar el perfil del usuario en la tabla personalizada Users
+        user_profile.delete()
+
+        # Eliminar el usuario en la tabla auth_user
+        auth_user.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

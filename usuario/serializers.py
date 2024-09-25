@@ -45,3 +45,4 @@ class CustomUserSerializer(serializers.ModelSerializer):
             'id': {'read_only': True},  # Esto asegura que el ID no se puede establecer manualmente
             'created_at': {'read_only': True},  # Esto asegura que created_at se establezca automáticamente
         }
+        
