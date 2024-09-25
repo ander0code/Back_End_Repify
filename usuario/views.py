@@ -1,6 +1,5 @@
 from rest_framework.viewsets import ViewSet
 from django.contrib.auth.models import User
-from rest_framework.authtoken.models import Token
 from django.utils import timezone
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -8,10 +7,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import LoginSerializer, CustomUserSerializer
 from rest_framework.decorators import action
-from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
-from django.conf import settings
 from usuario.models import Users
 
 import random
@@ -247,3 +244,5 @@ class LoginViewSet(ViewSet):
             return Response({"error": "Invalid email"}, status=status.HTTP_400_BAD_REQUEST)
         except Users.DoesNotExist:
             return Response({"error": "User profile not found"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        
