@@ -1,12 +1,11 @@
-#!/usr/bin/env bash
-# Exit on error
-set -o errexit
+#!/bin/bash
+set -e
 
-# Modify this line as needed for your package manager (pip, poetry, etc.)
+# Instalar dependencias
 pip install -r requirements.txt
 
-# Convert static asset files
-python manage.py collectstatic --no-input
-
-# Apply any outstanding database migrations
+# Realizar migraciones (opcional, dependiendo de tu flujo de trabajo)
 python manage.py migrate
+
+# Recopilar archivos estáticos
+python manage.py collectstatic --noinput
