@@ -6,11 +6,11 @@ from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import LoginSerializer, CustomUserSerializer
-from rest_framework.decorators import action
+from rest_framework.decorators import action,permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
 from usuario.models import Users
-
+from rest_framework.permissions import AllowAny ,IsAuthenticated
 import random
 
 
@@ -48,6 +48,7 @@ class LoginViewSet(ViewSet):
         tags=["User Management"]
     )
     @action(detail=False, methods=['POST'],url_path='Login')
+    @permission_classes([AllowAny])
     def Login(self, request):
         try:
             serializer = LoginSerializer(data=request.data)
@@ -102,6 +103,7 @@ class LoginViewSet(ViewSet):
         tags=["User Management"]
     )
     @action(detail=False, methods=['POST'], url_path='Register')
+    @permission_classes([AllowAny])
     def register(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
@@ -159,6 +161,7 @@ class LoginViewSet(ViewSet):
             tags=["User Management"]
         )
     @action(detail=False, methods=['POST'], url_path='request-password-reset')
+    @permission_classes([IsAuthenticated])
     def request_password_reset(self, request):
         email = request.data.get("email")
 
@@ -218,6 +221,7 @@ class LoginViewSet(ViewSet):
         tags=["User Management"]
     )
     @action(detail=False, methods=['POST'], url_path='reset_password')
+    @permission_classes([IsAuthenticated])
     def reset_password(self, request):
         email = request.data.get("email")
         reset_code = request.data.get("reset_code")
@@ -282,6 +286,7 @@ class LoginViewSet(ViewSet):
         tags=["User Management"]
     )
     @action(detail=True, methods=['PUT'], url_path='update-profile')
+    @permission_classes([IsAuthenticated])
     def update_user_profile(self, request, pk=None):
         try:
             # Obtener el perfil de usuario usando el ID (pk)
@@ -307,6 +312,7 @@ class LoginViewSet(ViewSet):
         tags=["User Management"]
     )
     @action(detail=True, methods=['DELETE'], url_path='delete-user')
+    @permission_classes([IsAuthenticated])
     def delete_user(self, request, pk=None):
         try:
             # Buscar al usuario en la tabla Users por su ID (pk)
