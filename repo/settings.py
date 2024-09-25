@@ -175,3 +175,4 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'ttitokevin5@gmail.com'  # Tu dirección de correo de Gmail
 EMAIL_HOST_PASSWORD = 'qtgy bdql nzxb crcw'  # Tu contraseña de correo de Gmail
+
