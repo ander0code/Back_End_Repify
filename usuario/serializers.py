@@ -3,28 +3,28 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Users  # Asegúrate de tener bien definido tu modelo de Usuarios
 
+from rest_framework import serializers
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
+
 class LoginSerializer(serializers.Serializer):
-    
     email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField()
 
     def validate(self, data):
-        email = data.get('email', None)
-        password = data.get('password', None)
+        email = data.get('email')
+        password = data.get('password')
 
-        # Autenticar al usuario con email y contraseña
         user = authenticate(username=email, password=password)
 
         if user is None:
-            raise serializers.ValidationError('Credenciales incorrectas, intente nuevamente.')
+            raise serializers.ValidationError('Invalid email or password.')
 
-        if not user.is_active:
-            raise serializers.ValidationError('Esta cuenta está inactiva.')
-
-        # Devolver los tokens JWT
+        # Generar los tokens JWT
+        refresh = RefreshToken.for_user(user)
         return {
-            'refresh': str(RefreshToken.for_user(user)),
-            'access': str(RefreshToken.for_user(user).access_token),
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
             'email': user.email,
         }
 

@@ -17,7 +17,8 @@ import random
 
 # Create your views here.
 class LoginViewSet(ViewSet):
-
+    
+    
     @swagger_auto_schema(
         operation_description="User login",
         request_body=openapi.Schema(
@@ -48,8 +49,7 @@ class LoginViewSet(ViewSet):
         },
         tags=["User Management"]
     )
-    @action(detail=False, methods=['POST'],url_path='Login')
-    @permission_classes([AllowAny])
+    @action(detail=False, methods=['POST'],url_path='Login', permission_classes=[AllowAny])
     def Login(self, request):
         try:
             serializer = LoginSerializer(data=request.data)
@@ -103,8 +103,7 @@ class LoginViewSet(ViewSet):
         },
         tags=["User Management"]
     )
-    @action(detail=False, methods=['POST'], url_path='Register')
-    @permission_classes([AllowAny])
+    @action(detail=False, methods=['POST'], url_path='Register', permission_classes=[AllowAny])
     def register(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
@@ -161,8 +160,7 @@ class LoginViewSet(ViewSet):
             },
             tags=["User Management"]
         )
-    @action(detail=False, methods=['POST'], url_path='request-password-reset')
-    @permission_classes([IsAuthenticated])
+    @action(detail=False, methods=['POST'], url_path='request-password-reset', permission_classes=[AllowAny])
     def request_password_reset(self, request):
         email = request.data.get("email")
 
@@ -221,8 +219,7 @@ class LoginViewSet(ViewSet):
         },
         tags=["User Management"]
     )
-    @action(detail=False, methods=['POST'], url_path='reset_password')
-    @permission_classes([IsAuthenticated])
+    @action(detail=False, methods=['POST'], url_path='reset_password', permission_classes=[AllowAny])
     def reset_password(self, request):
         email = request.data.get("email")
         reset_code = request.data.get("reset_code")
@@ -286,8 +283,7 @@ class LoginViewSet(ViewSet):
         },
         tags=["User Management"]
     )
-    @action(detail=True, methods=['PUT'], url_path='update-profile')
-    @permission_classes([IsAuthenticated])
+    @action(detail=True, methods=['PUT'], url_path='update-profile', permission_classes=[IsAuthenticated])
     def update_user_profile(self, request, pk=None):
         try:
             # Obtener el perfil de usuario usando el ID (pk)
@@ -303,7 +299,7 @@ class LoginViewSet(ViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     @swagger_auto_schema(
         operation_description="Delete a user and their associated auth_user entry by ID",
         responses={
@@ -312,8 +308,7 @@ class LoginViewSet(ViewSet):
         },
         tags=["User Management"]
     )
-    @action(detail=True, methods=['DELETE'], url_path='delete-user')
-    @permission_classes([IsAuthenticated])
+    @action(detail=True, methods=['DELETE'], url_path='delete-user', permission_classes=[IsAuthenticated])
     def delete_user(self, request, pk=None):
         try:
             # Buscar al usuario en la tabla Users por su ID (pk)
