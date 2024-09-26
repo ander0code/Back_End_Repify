@@ -160,7 +160,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),  # Duración del token de acceso
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=10),  # Duración del token de acceso
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),    # Duración del token de refresco
     'ROTATE_REFRESH_TOKENS': True,
 }
@@ -177,7 +177,7 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = ['http://127.0.0.1:8000']
 
 REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
