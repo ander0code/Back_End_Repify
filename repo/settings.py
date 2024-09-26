@@ -44,7 +44,7 @@ DEBUG = env.bool('DEBUG', default=False)
 
 ALLOWED_HOSTS = ['*']
 
-ASGI_APPLICATION = 'repo.asgi.application' 
+
 # Application definition
 
 INSTALLED_APPS = [
