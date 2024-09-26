@@ -13,6 +13,7 @@ from usuario.models import Users
 from rest_framework.permissions import AllowAny ,IsAuthenticated
 import random
 
+#acuerdate de que debes usar async y await
 
 # Create your views here.
 class LoginViewSet(ViewSet):
