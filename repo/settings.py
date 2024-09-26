@@ -174,7 +174,21 @@ EMAIL_HOST_USER = 'ttitokevin5@gmail.com'  # Tu dirección de correo de Gmail
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = ['http://127.0.0.1:8000']
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost",
+    "http://localhost:8000",
+    "http://localhost:8080",
+    "http://127.0.0.1:5501",  
+    "http://127.0.0.1:5500",
+    "http://127.0.0.1:3000",
+    "http://localhost:3000",
+    "http://192.168.56.1:3000",
+    "http://192.168.0.103:3000",
+    "http://172.22.0.1:3000",
+    "https://backend-as-sp-r4hbqw2mzq-uc.a.run.app",
+    "http://0.0.0.0:8000",
+]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
