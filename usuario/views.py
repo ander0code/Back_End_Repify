@@ -327,3 +327,57 @@ class LoginViewSet(ViewSet):
         auth_user.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def VerInfo():
+        pass
+
+class PublicacionViewSet(ViewSet):
+    
+    def Publicar():
+        pass
+     
+    def Actualizar():
+        pass
+    
+    def VerInfoProyecto():
+        pass
+    
+    def Eliminar():
+        pass
+    
+    def VerSolicitudes():
+        pass
+    
+    def VerProyectosGeneral():
+        pass
+    
+    def Aplicar():
+        pass
+    
+    def Aceptar():
+        pass
+    
+    def Negar():
+        pass
+    
+    def Notificaion():
+        pass
+    
+    def LimpiarNotifiacion():
+        pass
+    
+    def Colaboradores():
+        pass
+    
+    def FinalizarProyecto():
+        pass
+    
+    def MostrarPublicaciones():
+        pass
+    
+    def FiltroEtiqueta():
+        pass
+
+            
+    
+
