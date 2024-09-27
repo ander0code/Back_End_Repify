@@ -1,7 +1,7 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Users  # Asegúrate de tener bien definido tu modelo de Usuarios
+from .models import Users, Projects  # Asegúrate de tener bien definido tu modelo de Usuarios
 
 from rest_framework import serializers
 from django.contrib.auth import authenticate
@@ -44,5 +44,26 @@ class CustomUserSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'id': {'read_only': True},  # Esto asegura que el ID no se puede establecer manualmente
             'created_at': {'read_only': True},  # Esto asegura que created_at se establezca automáticamente
+        }
+        
+class ProjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Projects
+        fields = [
+            'name',
+            'description',
+            'start_date',
+            'end_date',
+            'status',
+            'project_type',
+            'priority',
+            'responsible',
+            'detailed_description',
+            'expected_benefits',
+            'necessary_requirements',
+            'progress'
+        ]
+        extra_kwargs = {
+            'id': {'read_only': True},   # Esto asegura que el ID no se puede establecer manualmente
         }
         
