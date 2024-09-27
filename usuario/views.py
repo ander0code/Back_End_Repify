@@ -332,7 +332,7 @@ class LoginViewSet(ViewSet):
         pass
 
 class PublicacionViewSet(ViewSet):
-    #permission_classes = [IsAuthenticated]  # Requiere autenticación
+    
     @swagger_auto_schema(
         operation_description="Create a new project",
         request_body=openapi.Schema(
@@ -379,12 +379,12 @@ class PublicacionViewSet(ViewSet):
         },
         tags=["Project Management"]
     )
-    @action(detail=False, methods=['POST'], url_path='create')#permission_classes=[IsAuthenticated]
+    @action(detail=False, methods=['POST'], url_path='create_proyect', permission_classes=[IsAuthenticated])
     def create_project(self, request):
         
         project_data = {
             **request.data,  
-            'start_date': timezone.now()  # Establece la fecha de creación
+            'start_date': timezone.now().strftime('%Y-%m-%d') # Establece la fecha de creación
         }
         # Serializa los datos
         project_serializer = ProjectSerializer(data=project_data)
@@ -395,7 +395,6 @@ class PublicacionViewSet(ViewSet):
         
         return Response(project_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-     
     @swagger_auto_schema(
         operation_description="Update an existing project by ID",
         request_body=openapi.Schema(
@@ -441,7 +440,7 @@ class PublicacionViewSet(ViewSet):
         },
         tags=["Project Management"]
     )
-    @action(detail=True, methods=['PUT'], url_path='update-project')
+    @action(detail=True, methods=['PUT'], url_path='update_project', permission_classes=[IsAuthenticated])
     def update_project(self, request, pk=None):
         try:
             # Obtener el proyecto usando el ID (pk)
@@ -466,7 +465,7 @@ class PublicacionViewSet(ViewSet):
         },
         tags=["Project Management"]
     )
-    @action(detail=True, methods=['delete'], url_path='delete')
+    @action(detail=True, methods=['delete'], url_path='delete_project', permission_classes=[IsAuthenticated])
     def delete_project(self, request, pk=None):
         try:
             # Obtener el proyecto usando el ID (pk)
@@ -476,9 +475,41 @@ class PublicacionViewSet(ViewSet):
         except Projects.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
     
-    def VerInfoProyecto():
-        pass
-    
+    @swagger_auto_schema(
+        operation_description="View project details by ID",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['id'],
+            properties={
+                'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the project to view'),
+            },
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                'Project details retrieved successfully',
+                ProjectSerializer,
+            ),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Project not found'),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid input data'),
+        },
+        tags=["Project Management"]
+    )
+    @action(detail=False, methods=['POST'], url_path='view_project', permission_classes=[IsAuthenticated])
+    def ver_proyect(self, request):
+        project_id = request.data.get('id')
+
+        if not project_id:
+            return Response({"error": "Project ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Obtener el proyecto usando el ID
+            project = Projects.objects.get(pk=project_id)
+        except Projects.DoesNotExist:
+            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Serializa los datos del proyecto
+        serializer = ProjectSerializer(project)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
     def VerSolicitudes():
         pass
