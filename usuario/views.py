@@ -5,11 +5,11 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, CustomUserSerializer, ProjectSerializer
+from .serializers import LoginSerializer, CustomUserSerializer, ProjectSerializer,SolicitudSerializer,CollaborationSerializer
 from rest_framework.decorators import action,permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
-from usuario.models import Users,Projects
+from usuario.models import Users,Projects,Solicitudes
 from rest_framework.permissions import AllowAny ,IsAuthenticated
 import random
 
@@ -17,7 +17,6 @@ import random
 
 # Create your views here.
 class LoginViewSet(ViewSet):
-    
     
     @swagger_auto_schema(
         operation_description="User login",
@@ -121,7 +120,7 @@ class LoginViewSet(ViewSet):
         users_data = {
             **request.data,  # Copia todos los datos del request
             'authuser': user.pk,  # Asigna el objeto User recién creado
-            'created_at': timezone.now()  # Establece la fecha de creación
+            'created_at': timezone.now().strftime('%Y-%m-%d')  # Establece la fecha de creación
         }
         
         users_serializer = CustomUserSerializer(data=users_data)
@@ -517,15 +516,137 @@ class PublicacionViewSet(ViewSet):
     def VerProyectosGeneral():
         pass
     
-    def Aplicar():
+    @swagger_auto_schema(
+        operation_description="Aplicar a un proyecto",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['project_id'],
+            properties={
+                'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto'),
+            }
+        ),
+        responses={
+            status.HTTP_201_CREATED: openapi.Response('Solicitud creada exitosamente'),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Error en los datos proporcionados'),
+        },
+        tags=["Project Management"]
+    )
+    @action(detail=False, methods=['POST'], url_path='ApplyProject',permission_classes=[IsAuthenticated])
+    def ApplyProject(self, request):
+        project_id = request.data.get('project_id')
+        user = request.user
+
+        try:
+            # Verificar si el proyecto acepta aplicaciones
+            project = Projects.objects.get(id=project_id)
+            if not project.accepting_applications:
+                return Response({"error": "Este proyecto no está aceptando aplicaciones"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Crear la solicitud
+            solicitud_data = {
+                'id_user': user.id,
+                'id_project': project_id,
+                'status': 'Pendiente',
+            }
+            
+            solicitud_serializer = SolicitudSerializer(data=solicitud_data)
+            
+            if solicitud_serializer.is_valid():
+                solicitud_serializer.save()
+                return Response(solicitud_serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(solicitud_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Projects.DoesNotExist:
+            return Response({"error": "Proyecto no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+    @swagger_auto_schema(
+        operation_description="Aceptar solicitud de un proyecto",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['id_solicitud'],
+            properties={
+                'id_solicitud': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID de la solicitud'),
+            }
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response('Solicitud aceptada exitosamente'),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Error en los datos proporcionados'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Solicitud no encontrada'),
+        },
+        tags=["Project Management"]
+    )
+    @action(detail=False, methods=['POST'], url_path='AcceptProject',permission_classes=[IsAuthenticated])
+    def AcceptProject(self, request):
+        id_solicitud = request.data.get('id_solicitud')
+        user = request.user
+
+        try:
+            solicitud = Solicitudes.objects.get(id_solicitud=id_solicitud)
+            
+            # Verificar si el usuario es el responsable del proyecto
+            if solicitud.id_project.responsible.id != user.id:
+                return Response({"error": "No tienes permiso para aceptar esta solicitud"}, status=status.HTTP_403_FORBIDDEN)
+
+            # Cambiar el estado de la solicitud a 'Aceptada'
+            solicitud.status = 'Aceptada'
+            solicitud.save()
+
+            # Crear una colaboración
+            collaboration_data = {
+                'user': solicitud.id_user.id,
+                'project': solicitud.id_project.id,
+                'status': 'Activa'
+            }
+            collaboration_serializer = CollaborationSerializer(data=collaboration_data)
+            
+            if collaboration_serializer.is_valid():
+                collaboration_serializer.save()
+                return Response({"mensaje": "Solicitud aceptada y colaboración creada exitosamente"}, status=status.HTTP_200_OK)
+            else:
+                return Response(collaboration_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Solicitudes.DoesNotExist:
+            return Response({"error": "Solicitud no encontrada"}, status=status.HTTP_404_NOT_FOUND)
+
+    @swagger_auto_schema(
+        operation_description="Negar solicitud de un proyecto",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['solicitud_id'],
+            properties={
+                'solicitud_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID de la solicitud'),
+            }
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response('Solicitud negada exitosamente'),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Error en los datos proporcionados'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Solicitud no encontrada'),
+        },
+        tags=["Project Management"]
+    )
+    @action(detail=False, methods=['POST'], url_path='Denyproject',permission_classes=[IsAuthenticated])
+    def Denyproject(self, request):
+        solicitud_id = request.data.get('solicitud_id')
+        user = request.user
+
+        try:
+            solicitud = Solicitudes.objects.get(id=solicitud_id)
+            
+            # Verificar si el usuario es el responsable del proyecto
+            if solicitud.id_project.responsible != user.id:
+                return Response({"error": "No tienes permiso para negar esta solicitud"}, status=status.HTTP_403_FORBIDDEN)
+
+            # Cambiar el estado de la solicitud a 'Negada'
+            solicitud.status = 'Negada'
+            solicitud.save()
+
+            return Response({"mensaje": "Solicitud negada exitosamente"}, status=status.HTTP_200_OK)
+        
+        except Solicitudes.DoesNotExist:
+            return Response({"error": "Solicitud no encontrada"}, status=status.HTTP_404_NOT_FOUND)
         pass
-    
-    def Aceptar():
-        pass
-    
-    def Negar():
-        pass
-    
+      
     def Notificaion():
         pass
     
@@ -538,7 +659,10 @@ class PublicacionViewSet(ViewSet):
     def FinalizarProyecto():
         pass
     
-    def MostrarPublicaciones():
+    def ViewProjectUser():
+        pass
+    
+    def ViewProjectUserAll():
         pass
     
     def FiltroEtiqueta():
