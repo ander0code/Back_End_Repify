@@ -174,7 +174,7 @@ class LoginViewSet(ViewSet):
             reset_code = random.randint(100000, 999999)
 
             # Almacenar el código y la fecha en el modelo Users
-            user_profile = user.users  # Asegúrate de que tienes acceso al perfil del usuario
+            user_profile = Users.objects.get(authuser=user) # Asegúrate de que tienes acceso al perfil del usuario
             user_profile.reset_code = reset_code
             user_profile.reset_code_created_at = timezone.now()
             user_profile.save()
