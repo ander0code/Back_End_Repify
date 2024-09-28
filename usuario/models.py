@@ -8,15 +8,20 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+
+
 class Collaborations(models.Model):
     id = models.BigAutoField(primary_key=True)
     user = models.ForeignKey('Users', models.DO_NOTHING, blank=True, null=True)
     project = models.ForeignKey('Projects', models.DO_NOTHING, db_column='project', blank=True, null=True)
     role = models.TextField(blank=True, null=True)
+    status = models.TextField()
 
     class Meta:
         managed = False
-        db_table = 'collaborations'
+        db_table = 'collaborations'    
+
+
 
 
 class Notifications(models.Model):
@@ -35,8 +40,8 @@ class Projects(models.Model):
     id = models.BigAutoField(primary_key=True)
     name = models.TextField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
-    start_date = models.DateTimeField(blank=True, null=True)
-    end_date = models.DateTimeField(blank=True, null=True)
+    start_date = models.DateField(blank=True, null=True)
+    end_date = models.DateField(blank=True, null=True)
     status = models.TextField(blank=True, null=True)
     project_type = models.TextField(blank=True, null=True)
     priority = models.TextField(blank=True, null=True)
@@ -45,10 +50,23 @@ class Projects(models.Model):
     expected_benefits = models.TextField(blank=True, null=True)
     necessary_requirements = models.TextField(blank=True, null=True)
     progress = models.IntegerField(blank=True, null=True)
+    accepting_applications = models.BooleanField(blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = 'projects'
+
+
+class Solicitudes(models.Model):
+    id_solicitud = models.AutoField(primary_key=True)
+    id_user = models.ForeignKey('Users', models.DO_NOTHING, db_column='id_user', blank=True, null=True)
+    id_project = models.ForeignKey(Projects, models.DO_NOTHING, db_column='id_project', blank=True, null=True)
+    status = models.TextField()
+    created_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'solicitudes'
 
 
 class TagAssociations(models.Model):
@@ -80,12 +98,10 @@ class Users(models.Model):
     biography = models.TextField(blank=True, null=True)
     photo = models.TextField(blank=True, null=True)
     achievements = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(blank=True, null=True,auto_now_add=True)
-    authuser = models.OneToOneField(User, on_delete=models.CASCADE)
-    # Otros campos personalizados
-    
-    reset_code = models.IntegerField(null=True, blank=True)  # Código de 6 dígitos
-    reset_code_created_at = models.DateTimeField(null=True, blank=True) 
+    created_at = models.DateTimeField(blank=True, null=True)
+    authuser = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True)
+    reset_code = models.IntegerField(blank=True, null=True)
+    reset_code_created_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         managed = False
