@@ -61,7 +61,8 @@ class ProjectSerializer(serializers.ModelSerializer):
             'detailed_description',
             'expected_benefits',
             'necessary_requirements',
-            'progress'
+            'progress',
+            'accepting_applications'
         ]
         extra_kwargs = {
             'id': {'read_only': True},   # Esto asegura que el ID no se puede establecer manualmente

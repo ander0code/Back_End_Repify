@@ -254,7 +254,9 @@ class LoginViewSet(ViewSet):
         operation_description="Update user profile by ID",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
+            required=['id'],
             properties={
+                'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the user to view'),
                 'university': openapi.Schema(type=openapi.TYPE_STRING, description='University of the user'),
                 'career': openapi.Schema(type=openapi.TYPE_STRING, description='Career of the user'),
                 'cycle': openapi.Schema(type=openapi.TYPE_STRING, description='Cycle of the user'),
@@ -283,11 +285,12 @@ class LoginViewSet(ViewSet):
         },
         tags=["User Management"]
     )
-    @action(detail=True, methods=['PUT'], url_path='update-profile', permission_classes=[IsAuthenticated])
-    def update_user_profile(self, request, pk=None):
+    @action(detail=False, methods=['PUT'], url_path='update-profile')
+    def update_user_profile(self, request):
+        user_id = request.data.get('id')
         try:
             # Obtener el perfil de usuario usando el ID (pk)
-            user_profile = Users.objects.get(pk=pk)
+            user_profile = Users.objects.get(pk=user_id)
         except Users.DoesNotExist:
             return Response({"error": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -302,17 +305,25 @@ class LoginViewSet(ViewSet):
 
     @swagger_auto_schema(
         operation_description="Delete a user and their associated auth_user entry by ID",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['id'],
+            properties={
+                'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the user to view'),
+            },
+        ),
         responses={
             status.HTTP_204_NO_CONTENT: openapi.Response('User and auth_user deleted successfully'),
             status.HTTP_404_NOT_FOUND: openapi.Response('User not found'),
         },
         tags=["User Management"]
     )
-    @action(detail=True, methods=['DELETE'], url_path='delete-user', permission_classes=[IsAuthenticated])
-    def delete_user(self, request, pk=None):
+    @action(detail=False, methods=['DELETE'], url_path='delete-user')
+    def delete_user(self, request):
+        user_id = request.data.get('id')
         try:
             # Buscar al usuario en la tabla Users por su ID (pk)
-            user_profile = Users.objects.get(pk=pk)
+            user_profile = Users.objects.get(pk=user_id)
             
             # Obtener el usuario en la tabla auth_user
             auth_user = user_profile.authuser  # Asumiendo que 'authuser' es una FK a User
@@ -341,7 +352,6 @@ class PublicacionViewSet(ViewSet):
             properties={
                 'name': openapi.Schema(type=openapi.TYPE_STRING, description='Name of the project'),
                 'description': openapi.Schema(type=openapi.TYPE_STRING, description='Description of the project'),
-                'start_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='Start date of the project'),
                 'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='End date of the project'),
                 'status': openapi.Schema(type=openapi.TYPE_STRING, description='Current status of the project'),
                 'project_type': openapi.Schema(type=openapi.TYPE_STRING, description='Type of the project'),
@@ -351,6 +361,7 @@ class PublicacionViewSet(ViewSet):
                 'expected_benefits': openapi.Schema(type=openapi.TYPE_STRING, description='Expected benefits of the project'),
                 'necessary_requirements': openapi.Schema(type=openapi.TYPE_STRING, description='Necessary requirements for the project'),
                 'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progress percentage of the project'),
+                'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='ACCEPT REQUESTS'),
             },
         ),
         responses={
@@ -372,6 +383,7 @@ class PublicacionViewSet(ViewSet):
                         'expected_benefits': openapi.Schema(type=openapi.TYPE_STRING, description='Expected benefits of the project'),
                         'necessary_requirements': openapi.Schema(type=openapi.TYPE_STRING, description='Necessary requirements for the project'),
                         'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progress percentage of the project'),
+                        'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='ACCEPT REQUESTS'),
                     },
                 ),
             ),
@@ -399,19 +411,20 @@ class PublicacionViewSet(ViewSet):
         operation_description="Update an existing project by ID",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
+            required=['id'],
             properties={
+                'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the project to view'),
                 'name': openapi.Schema(type=openapi.TYPE_STRING, description='Name of the project'),
                 'description': openapi.Schema(type=openapi.TYPE_STRING, description='Description of the project'),
-                'start_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='Start date of the project'),
                 'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='End date of the project'),
                 'status': openapi.Schema(type=openapi.TYPE_STRING, description='Current status of the project'),
                 'project_type': openapi.Schema(type=openapi.TYPE_STRING, description='Type of the project'),
                 'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Priority of the project'),
-                'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the responsible user'),
                 'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Detailed description of the project'),
                 'expected_benefits': openapi.Schema(type=openapi.TYPE_STRING, description='Expected benefits of the project'),
                 'necessary_requirements': openapi.Schema(type=openapi.TYPE_STRING, description='Necessary requirements for the project'),
                 'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progress percentage of the project'),
+                'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='ACCEPT REQUESTS'),
             },
         ),
         responses={
@@ -426,12 +439,12 @@ class PublicacionViewSet(ViewSet):
                         'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='End date of the project'),
                         'status': openapi.Schema(type=openapi.TYPE_STRING, description='Current status of the project'),
                         'project_type': openapi.Schema(type=openapi.TYPE_STRING, description='Type of the project'),
-                        'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Priority of the project'),
                         'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the responsible user'),
                         'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Detailed description of the project'),
                         'expected_benefits': openapi.Schema(type=openapi.TYPE_STRING, description='Expected benefits of the project'),
                         'necessary_requirements': openapi.Schema(type=openapi.TYPE_STRING, description='Necessary requirements for the project'),
                         'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progress percentage of the project'),
+                        'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='ACCEPT REQUESTS'),
                     }
                 )
             ),
@@ -440,12 +453,14 @@ class PublicacionViewSet(ViewSet):
         },
         tags=["Project Management"]
     )
-    @action(detail=True, methods=['PUT'], url_path='update_project', permission_classes=[IsAuthenticated])
-    def update_project(self, request, pk=None):
+    @action(detail=False, methods=['PUT'], url_path='update_project', permission_classes=[IsAuthenticated])
+    def update_project(self, request):
+        
         try:
             # Obtener el proyecto usando el ID (pk)
-            project = Projects.objects.get(pk=pk)
-        except Projects.DoesNotExist:
+            project_id = request.data.get('id')
+            project = Projects.objects.get(pk=project_id)
+        except project.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
 
         # Crea un serializador con los datos actuales del proyecto y los nuevos datos enviados
@@ -459,17 +474,25 @@ class PublicacionViewSet(ViewSet):
     
     @swagger_auto_schema(
         operation_description="Delete a project by ID",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['id'],
+            properties={
+                'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the project to view'),
+            },
+        ),
         responses={
             status.HTTP_204_NO_CONTENT: openapi.Response('Project deleted successfully'),
             status.HTTP_404_NOT_FOUND: openapi.Response('Project not found'),
         },
         tags=["Project Management"]
     )
-    @action(detail=True, methods=['delete'], url_path='delete_project', permission_classes=[IsAuthenticated])
-    def delete_project(self, request, pk=None):
+    @action(detail=False, methods=['delete'], url_path='delete_project', permission_classes=[IsAuthenticated])
+    def delete_project(self, request):
         try:
             # Obtener el proyecto usando el ID (pk)
-            project = Projects.objects.get(pk=pk)
+            project_id = request.data.get('id')
+            project = Projects.objects.get(pk=project_id)
             project.delete()  # Elimina el proyecto
             return Response(status=status.HTTP_204_NO_CONTENT)  # Respuesta sin contenido
         except Projects.DoesNotExist:
@@ -513,9 +536,26 @@ class PublicacionViewSet(ViewSet):
     
     def VerSolicitudes():
         pass
-    
-    def VerProyectosGeneral():
-        pass
+    @swagger_auto_schema(
+        operation_description="Retrieve all projects in ascending order by start date",
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="List of projects in ascending order",
+                schema=ProjectSerializer(many=True)
+            ),
+            status.HTTP_400_BAD_REQUEST: "Invalid request",
+        },
+        tags=["Project Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='projects_asc', permission_classes=[IsAuthenticated])
+    def get_projects_asc(self, request):
+        # Obtener todos los proyectos en orden ascendente por start_date
+        projects = Projects.objects.all().order_by('start_date')
+        
+        # Serializar los proyectos
+        serializer = ProjectSerializer(projects, many=True)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
     def Aplicar():
         pass
