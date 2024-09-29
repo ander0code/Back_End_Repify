@@ -285,7 +285,7 @@ class LoginViewSet(ViewSet):
         },
         tags=["User Management"]
     )
-    @action(detail=False, methods=['PUT'], url_path='update-profile')
+    @action(detail=False, methods=['PUT'], url_path='update-profile', permission_classes=[IsAuthenticated])
     def update_user_profile(self, request):
         user_id = request.data.get('id')
         try:
@@ -318,7 +318,7 @@ class LoginViewSet(ViewSet):
         },
         tags=["User Management"]
     )
-    @action(detail=False, methods=['DELETE'], url_path='delete-user')
+    @action(detail=False, methods=['DELETE'], url_path='delete-user', permission_classes=[IsAuthenticated])
     def delete_user(self, request):
         user_id = request.data.get('id')
         try:
