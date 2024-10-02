@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'corsheaders',
+    'adrf',
     'rest_framework',
     'rest_framework.authtoken',  # required for serving swagger ui's css/js files
     'drf_yasg',
