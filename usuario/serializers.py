@@ -1,5 +1,6 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
+from adrf.serializers import Serializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Users, Projects , Collaborations, Solicitudes  # Asegúrate de tener bien definido tu modelo de Usuarios
 
@@ -7,7 +8,7 @@ from rest_framework import serializers
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 
-class LoginSerializer(serializers.Serializer):
+class LoginSerializer(Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
 

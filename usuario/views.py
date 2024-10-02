@@ -1,4 +1,4 @@
-from rest_framework.viewsets import ViewSet
+from adrf.viewsets import ViewSet
 from django.contrib.auth.models import User
 from django.utils import timezone
 from drf_yasg.utils import swagger_auto_schema
@@ -12,6 +12,8 @@ from django.core.mail import send_mail
 from usuario.models import Users,Projects,Solicitudes
 from rest_framework.permissions import AllowAny ,IsAuthenticated
 import random
+
+from asgiref.sync import sync_to_async
 
 #acuerdate de que debes usar async y await
 
@@ -49,10 +51,10 @@ class LoginViewSet(ViewSet):
         tags=["User Management"]
     )
     @action(detail=False, methods=['POST'],url_path='Login', permission_classes=[AllowAny])
-    def Login(self, request):
+    async def Login(self, request):
         try:
             serializer = LoginSerializer(data=request.data)
-            if serializer.is_valid():
+            if await sync_to_async(serializer.is_valid)(raise_exception=False):
                 return Response(serializer.validated_data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -388,7 +390,7 @@ class PublicacionViewSet(ViewSet):
             ),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid input data'),
         },
-        tags=["Project Management"]
+        tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='create_proyect', permission_classes=[IsAuthenticated])
     def create_project(self, request):
@@ -450,7 +452,7 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_404_NOT_FOUND: openapi.Response('Project not found'),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid input data'),
         },
-        tags=["Project Management"]
+        tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['PUT'], url_path='update_project', permission_classes=[IsAuthenticated])
     def update_project(self, request):
@@ -484,7 +486,7 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_204_NO_CONTENT: openapi.Response('Project deleted successfully'),
             status.HTTP_404_NOT_FOUND: openapi.Response('Project not found'),
         },
-        tags=["Project Management"]
+        tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['delete'], url_path='delete_project', permission_classes=[IsAuthenticated])
     def delete_project(self, request):
@@ -514,7 +516,7 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_404_NOT_FOUND: openapi.Response('Project not found'),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid input data'),
         },
-        tags=["Project Management"]
+        tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='view_project_id', permission_classes=[IsAuthenticated])
     def view_project_id(self, request):
@@ -535,6 +537,7 @@ class PublicacionViewSet(ViewSet):
     
     def VerSolicitudes():
         pass
+    
     @swagger_auto_schema(
         operation_description="Retrieve all projects in ascending order by start date",
         responses={
@@ -544,7 +547,7 @@ class PublicacionViewSet(ViewSet):
             ),
             status.HTTP_400_BAD_REQUEST: "Invalid request",
         },
-        tags=["Project Management"]
+        tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['GET'], url_path='view_project_all', permission_classes=[IsAuthenticated])
     def view_project_all(self, request):
@@ -569,7 +572,7 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_201_CREATED: openapi.Response('Solicitud creada exitosamente'),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Error en los datos proporcionados'),
         },
-        tags=["Project Management"]
+        tags=["Notificacions Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='ApplyProject',permission_classes=[IsAuthenticated])
     def ApplyProject(self, request):
@@ -614,7 +617,7 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_400_BAD_REQUEST: openapi.Response('Error en los datos proporcionados'),
             status.HTTP_404_NOT_FOUND: openapi.Response('Solicitud no encontrada'),
         },
-        tags=["Project Management"]
+        tags=["Notificacions Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='AcceptProject',permission_classes=[IsAuthenticated])
     def AcceptProject(self, request):
@@ -663,7 +666,7 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_400_BAD_REQUEST: openapi.Response('Error en los datos proporcionados'),
             status.HTTP_404_NOT_FOUND: openapi.Response('Solicitud no encontrada'),
         },
-        tags=["Project Management"]
+        tags=["Notificacions Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='Denyproject',permission_classes=[IsAuthenticated])
     def Denyproject(self, request):
