@@ -5,7 +5,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, CustomUserSerializer, ProjectSerializer,SolicitudSerializer,CollaborationSerializer
+from .serializers import LoginSerializer, CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,CollaborationSerializer,ProjectSerializerID
 from rest_framework.decorators import action,permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
@@ -511,7 +511,7 @@ class PublicacionViewSet(ViewSet):
         responses={
             status.HTTP_200_OK: openapi.Response(
                 'Project details retrieved successfully',
-                ProjectSerializer,
+                ProjectSerializerID,
             ),
             status.HTTP_404_NOT_FOUND: openapi.Response('Project not found'),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid input data'),
@@ -532,18 +532,15 @@ class PublicacionViewSet(ViewSet):
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
 
         # Serializa los datos del proyecto
-        serializer = ProjectSerializer(project)
+        serializer = ProjectSerializerID(project)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
-    def VerSolicitudes():
-        pass
     
     @swagger_auto_schema(
         operation_description="Retrieve all projects in ascending order by start date",
         responses={
             status.HTTP_200_OK: openapi.Response(
                 description="List of projects in ascending order",
-                schema=ProjectSerializer(many=True)
+                schema=ProjectSerializerAll(many=True)
             ),
             status.HTTP_400_BAD_REQUEST: "Invalid request",
         },
@@ -555,10 +552,10 @@ class PublicacionViewSet(ViewSet):
         projects = Projects.objects.all().order_by('start_date')
         
         # Serializar los proyectos
-        serializer = ProjectSerializer(projects, many=True)
+        serializer = ProjectSerializerAll(projects, many=True)
         
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+        
     @swagger_auto_schema(
         operation_description="Aplicar a un proyecto",
         request_body=openapi.Schema(
