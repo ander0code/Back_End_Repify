@@ -105,6 +105,7 @@ class ProjectSerializerAll(serializers.ModelSerializer):
     class Meta:
         model = Projects
         fields = [
+            'id',
             'name',
             'description',
             'start_date',
@@ -141,6 +142,7 @@ class ProjectSerializerID(serializers.ModelSerializer):
     class Meta:
         model = Projects
         fields = [
+            'id',
             'name',
             'description',
             'start_date',
