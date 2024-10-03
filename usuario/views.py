@@ -5,7 +5,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,CollaborationSerializer,ProjectSerializerID
+from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,CollaborationSerializer,ProjectSerializerID
 from rest_framework.decorators import action,permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
@@ -400,7 +400,7 @@ class PublicacionViewSet(ViewSet):
             'start_date': timezone.now().strftime('%Y-%m-%d') # Establece la fecha de creación
         }
         # Serializa los datos
-        project_serializer = ProjectSerializer(data=project_data)
+        project_serializer = ProjectSerializerCreate(data=project_data)
         
         if project_serializer.is_valid():
             project_serializer.save()  # Guarda el proyecto si los datos son válidos
@@ -465,7 +465,7 @@ class PublicacionViewSet(ViewSet):
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
 
         # Crea un serializador con los datos actuales del proyecto y los nuevos datos enviados
-        serializer = ProjectSerializer(instance=project, data=request.data, partial=True)
+        serializer = ProjectSerializerCreate(instance=project, data=request.data, partial=True)
 
         if serializer.is_valid():
             serializer.save()  # Guarda las actualizaciones
