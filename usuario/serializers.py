@@ -104,7 +104,8 @@ class ProjectSerializerCreate(adrf.serializers.ModelSerializer):
 class ProjectSerializerAll(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField()  # Nombre completo del creador
     collaboration_count = serializers.SerializerMethodField()  # Cantidad de colaboradores
-
+    project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
+    
     class Meta:
         model = Projects
         fields = [
@@ -120,6 +121,7 @@ class ProjectSerializerAll(adrf.serializers.ModelSerializer):
             'detailed_description',
             'progress',
             'accepting_applications',
+            'type_aplyuni',
             'creator_name',  # Nombre completo del creador
             'collaboration_count'  # Cantidad de colaboradores
         ]
@@ -141,7 +143,8 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField()  # Nombre completo del creador
     collaboration_count = serializers.SerializerMethodField()  # Cantidad de colaboradores
     collaborators = serializers.SerializerMethodField()  # Nombres de los colaboradores
-
+    project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
+    
     class Meta:
         model = Projects
         fields = [
@@ -159,6 +162,7 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
             'necessary_requirements',
             'progress',
             'accepting_applications',
+            'type_aplyuni',
             'creator_name',  # Nombre completo del creador
             'collaboration_count',  # Cantidad de colaboradores
             'collaborators'  # Lista de nombres de los colaboradores
