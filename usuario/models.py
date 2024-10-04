@@ -8,8 +8,6 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-
-
 class Collaborations(models.Model):
     id = models.BigAutoField(primary_key=True)
     user = models.ForeignKey('Users', models.DO_NOTHING, blank=True, null=True)

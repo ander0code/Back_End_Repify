@@ -1,9 +1,10 @@
 from django.contrib.auth import authenticate
-from rest_framework import serializers
+
+import adrf
 from adrf.serializers import Serializer
+
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Users, Projects , Collaborations, Solicitudes  # Asegúrate de tener bien definido tu modelo de Usuarios
-
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -33,7 +34,7 @@ class LoginSerializer(Serializer):
             'id': user.id,  # Aquí se agrega el ID del usuario
         }
 
-class CustomUserSerializer(serializers.ModelSerializer):
+class CustomUserSerializer(Serializer):
     class Meta:
         model = Users
         fields = [
@@ -51,7 +52,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
             'created_at': {'read_only': True},  # Esto asegura que created_at se establezca automáticamente
         }
 
-class ProjectSerializerCreate(serializers.ModelSerializer):
+class ProjectSerializerCreate(Serializer):
     creator_name = serializers.SerializerMethodField()  # Nombre completo del creador
     collaboration_count = serializers.SerializerMethodField()  # Cantidad de colaboradores
     collaborators = serializers.SerializerMethodField()  # Nombres de los colaboradores
@@ -98,13 +99,14 @@ class ProjectSerializerCreate(serializers.ModelSerializer):
             for collab in collaborators if collab.user and collab.user.authuser
         ]
 
-class ProjectSerializerAll(serializers.ModelSerializer):
+class ProjectSerializerAll(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField()  # Nombre completo del creador
     collaboration_count = serializers.SerializerMethodField()  # Cantidad de colaboradores
 
     class Meta:
         model = Projects
         fields = [
+            'id',
             'name',
             'description',
             'start_date',
@@ -133,7 +135,7 @@ class ProjectSerializerAll(serializers.ModelSerializer):
         # Contar la cantidad de colaboradores relacionados con el proyecto
         return Collaborations.objects.filter(project=obj).count()
 
-class ProjectSerializerID(serializers.ModelSerializer):
+class ProjectSerializerID(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField()  # Nombre completo del creador
     collaboration_count = serializers.SerializerMethodField()  # Cantidad de colaboradores
     collaborators = serializers.SerializerMethodField()  # Nombres de los colaboradores
@@ -141,6 +143,7 @@ class ProjectSerializerID(serializers.ModelSerializer):
     class Meta:
         model = Projects
         fields = [
+            'id',
             'name',
             'description',
             'start_date',
@@ -180,12 +183,12 @@ class ProjectSerializerID(serializers.ModelSerializer):
             for collab in collaborators if collab.user and collab.user.authuser
         ]
 
-class SolicitudSerializer(serializers.ModelSerializer):
+class SolicitudSerializer(Serializer):
     class Meta:
         model = Solicitudes
         fields = "__all__"
 
-class CollaborationSerializer(serializers.ModelSerializer):
+class CollaborationSerializer(Serializer):
     class Meta:
         model = Collaborations
         fields = "__all__"
