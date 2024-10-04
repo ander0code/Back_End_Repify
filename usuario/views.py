@@ -1,4 +1,4 @@
-from rest_framework.viewsets import ViewSet
+from adrf.viewsets import ViewSet
 from django.contrib.auth.models import User
 from django.utils import timezone
 from drf_yasg.utils import swagger_auto_schema
@@ -6,12 +6,15 @@ from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import LoginSerializer, CustomUserSerializer, ProjectSerializer,SolicitudSerializer,CollaborationSerializer, NotificationSerializer
+from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,CollaborationSerializer,ProjectSerializerID
 from rest_framework.decorators import action,permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
 from usuario.models import Users,Projects,Solicitudes
 from rest_framework.permissions import AllowAny ,IsAuthenticated
 import random
+
+from asgiref.sync import sync_to_async
 
 #acuerdate de que debes usar async y await
 
@@ -49,10 +52,10 @@ class LoginViewSet(ViewSet):
         tags=["User Management"]
     )
     @action(detail=False, methods=['POST'],url_path='Login', permission_classes=[AllowAny])
-    def Login(self, request):
+    async def Login(self, request):
         try:
             serializer = LoginSerializer(data=request.data)
-            if serializer.is_valid():
+            if await sync_to_async(serializer.is_valid)(raise_exception=False):
                 return Response(serializer.validated_data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -353,14 +356,15 @@ class PublicacionViewSet(ViewSet):
                 'description': openapi.Schema(type=openapi.TYPE_STRING, description='Description of the project'),
                 'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='End date of the project'),
                 'status': openapi.Schema(type=openapi.TYPE_STRING, description='Current status of the project'),
-                'project_type': openapi.Schema(type=openapi.TYPE_STRING, description='Type of the project'),
+                'project_type': openapi.Schema(type=openapi.TYPE_ARRAY,items=openapi.Items(type=openapi.TYPE_STRING),description="project_type to apply"),
                 'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Priority level of the project'),
                 'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the user responsible for the project'),
                 'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Detailed description of the project'),
                 'expected_benefits': openapi.Schema(type=openapi.TYPE_STRING, description='Expected benefits of the project'),
                 'necessary_requirements': openapi.Schema(type=openapi.TYPE_STRING, description='Necessary requirements for the project'),
                 'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progress percentage of the project'),
-                'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='ACCEPT REQUESTS'),
+                'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Accepting requests for collaboration'),
+                'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='type_aplyuni of the project'),  
             },
         ),
         responses={
@@ -375,20 +379,25 @@ class PublicacionViewSet(ViewSet):
                         'start_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='Start date of the project'),
                         'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='End date of the project'),
                         'status': openapi.Schema(type=openapi.TYPE_STRING, description='Current status of the project'),
-                        'project_type': openapi.Schema(type=openapi.TYPE_STRING, description='Type of the project'),
+                        'project_type': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Items(type=openapi.TYPE_STRING),
+                            description="List of project_type"
+                        ),
                         'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Priority level of the project'),
                         'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the user responsible for the project'),
                         'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Detailed description of the project'),
                         'expected_benefits': openapi.Schema(type=openapi.TYPE_STRING, description='Expected benefits of the project'),
                         'necessary_requirements': openapi.Schema(type=openapi.TYPE_STRING, description='Necessary requirements for the project'),
                         'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progress percentage of the project'),
-                        'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='ACCEPT REQUESTS'),
+                        'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Accepting requests for collaboration'),
+                        'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='type_aplyuni'),
                     },
                 ),
             ),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid input data'),
         },
-        tags=["Project Management"]
+        tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='create_proyect', permission_classes=[IsAuthenticated])
     def create_project(self, request):
@@ -398,7 +407,7 @@ class PublicacionViewSet(ViewSet):
             'start_date': timezone.now().strftime('%Y-%m-%d') # Establece la fecha de creación
         }
         # Serializa los datos
-        project_serializer = ProjectSerializer(data=project_data)
+        project_serializer = ProjectSerializerCreate(data=project_data)
         
         if project_serializer.is_valid():
             project_serializer.save()  # Guarda el proyecto si los datos son válidos
@@ -450,7 +459,7 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_404_NOT_FOUND: openapi.Response('Project not found'),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid input data'),
         },
-        tags=["Project Management"]
+        tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['PUT'], url_path='update_project', permission_classes=[IsAuthenticated])
     def update_project(self, request):
@@ -463,7 +472,7 @@ class PublicacionViewSet(ViewSet):
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
 
         # Crea un serializador con los datos actuales del proyecto y los nuevos datos enviados
-        serializer = ProjectSerializer(instance=project, data=request.data, partial=True)
+        serializer = ProjectSerializerCreate(instance=project, data=request.data, partial=True)
 
         if serializer.is_valid():
             serializer.save()  # Guarda las actualizaciones
@@ -484,7 +493,7 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_204_NO_CONTENT: openapi.Response('Project deleted successfully'),
             status.HTTP_404_NOT_FOUND: openapi.Response('Project not found'),
         },
-        tags=["Project Management"]
+        tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['delete'], url_path='delete_project', permission_classes=[IsAuthenticated])
     def delete_project(self, request):
@@ -509,12 +518,12 @@ class PublicacionViewSet(ViewSet):
         responses={
             status.HTTP_200_OK: openapi.Response(
                 'Project details retrieved successfully',
-                ProjectSerializer,
+                ProjectSerializerID,
             ),
             status.HTTP_404_NOT_FOUND: openapi.Response('Project not found'),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid input data'),
         },
-        tags=["Project Management"]
+        tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='view_project_id', permission_classes=[IsAuthenticated])
     def view_project_id(self, request):
@@ -530,21 +539,19 @@ class PublicacionViewSet(ViewSet):
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
 
         # Serializa los datos del proyecto
-        serializer = ProjectSerializer(project)
+        serializer = ProjectSerializerID(project)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-    def VerSolicitudes():
-        pass
     @swagger_auto_schema(
         operation_description="Retrieve all projects in ascending order by start date",
         responses={
             status.HTTP_200_OK: openapi.Response(
                 description="List of projects in ascending order",
-                schema=ProjectSerializer(many=True)
+                schema=ProjectSerializerAll(many=True)
             ),
             status.HTTP_400_BAD_REQUEST: "Invalid request",
         },
-        tags=["Project Management"]
+        tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['GET'], url_path='view_project_all', permission_classes=[IsAuthenticated])
     def view_project_all(self, request):
@@ -552,10 +559,10 @@ class PublicacionViewSet(ViewSet):
         projects = Projects.objects.all().order_by('start_date')
         
         # Serializar los proyectos
-        serializer = ProjectSerializer(projects, many=True)
+        serializer = ProjectSerializerAll(projects, many=True)
         
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+        
     @swagger_auto_schema(
         operation_description="Aplicar a un proyecto",
         request_body=openapi.Schema(
@@ -595,7 +602,7 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_400_BAD_REQUEST: openapi.Response('Error en los datos proporcionados'),
             status.HTTP_404_NOT_FOUND: openapi.Response('Proyecto no encontrado'),
         },
-        tags=["Project Management"]
+        tags=["Notificacions Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='ApplyProject')#, permission_classes=[IsAuthenticated]
     def ApplyProject(self, request):
@@ -655,7 +662,7 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_400_BAD_REQUEST: openapi.Response('Error en los datos proporcionados'),
             status.HTTP_404_NOT_FOUND: openapi.Response('Solicitud no encontrada'),
         },
-        tags=["Project Management"]
+        tags=["Notificacions Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='AcceptProject',permission_classes=[IsAuthenticated])
     def AcceptProject(self, request):
@@ -704,7 +711,7 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_400_BAD_REQUEST: openapi.Response('Error en los datos proporcionados'),
             status.HTTP_404_NOT_FOUND: openapi.Response('Solicitud no encontrada'),
         },
-        tags=["Project Management"]
+        tags=["Notificacions Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='Denyproject',permission_classes=[IsAuthenticated])
     def Denyproject(self, request):
@@ -749,5 +756,4 @@ class PublicacionViewSet(ViewSet):
         pass
 
             
-    
 
