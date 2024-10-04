@@ -34,7 +34,7 @@ class LoginSerializer(Serializer):
             'id': user.id,  # Aquí se agrega el ID del usuario
         }
 
-class CustomUserSerializer(Serializer):
+class CustomUserSerializer(adrf.serializers.ModelSerializer):
     class Meta:
         model = Users
         fields = [
@@ -52,11 +52,12 @@ class CustomUserSerializer(Serializer):
             'created_at': {'read_only': True},  # Esto asegura que created_at se establezca automáticamente
         }
 
-class ProjectSerializerCreate(Serializer):
+class ProjectSerializerCreate(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField()  # Nombre completo del creador
     collaboration_count = serializers.SerializerMethodField()  # Cantidad de colaboradores
     collaborators = serializers.SerializerMethodField()  # Nombres de los colaboradores
-
+    project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
+    
     class Meta:
         model = Projects
         fields = [
@@ -73,6 +74,7 @@ class ProjectSerializerCreate(Serializer):
             'necessary_requirements',
             'progress',
             'accepting_applications',
+            'type_aplyuni',
             'creator_name',  # Nombre completo del creador
             'collaboration_count',  # Cantidad de colaboradores
             'collaborators'  # Lista de nombres de los colaboradores

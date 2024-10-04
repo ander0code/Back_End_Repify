@@ -7,6 +7,7 @@
 # Feel free to rename the models, but don't rename db_table values or field names.
 from django.db import models
 from django.contrib.auth.models import User
+from django.contrib.postgres.fields import ArrayField
 
 class Collaborations(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -39,10 +40,11 @@ class Projects(models.Model):
     start_date = models.DateField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
     status = models.TextField(blank=True, null=True)
-    project_type = models.TextField(blank=True, null=True)
+    project_type = ArrayField(models.CharField(max_length=500), blank=True, null=True)
     priority = models.TextField(blank=True, null=True)
     responsible = models.ForeignKey('Users', models.DO_NOTHING, db_column='responsible', blank=True, null=True)
     detailed_description = models.TextField(blank=True, null=True)
+    type_aplyuni = models.TextField(blank=True, null=True)
     expected_benefits = models.TextField(blank=True, null=True)
     necessary_requirements = models.TextField(blank=True, null=True)
     progress = models.IntegerField(blank=True, null=True)
