@@ -19,7 +19,7 @@ class Collaborations(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'collaborations'
+        db_table = 'collaborations'    
 
 
 

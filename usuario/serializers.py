@@ -1,7 +1,7 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Users, Projects  # Asegúrate de tener bien definido tu modelo de Usuarios
+from .models import Users, Projects , Collaborations, Solicitudes, Notifications  # Asegúrate de tener bien definido tu modelo de Usuarios
 
 from rest_framework import serializers
 from django.contrib.auth import authenticate
@@ -15,6 +15,7 @@ class LoginSerializer(serializers.Serializer):
         email = data.get('email')
         password = data.get('password')
 
+        # Autenticar al usuario usando el email y la contraseña
         user = authenticate(username=email, password=password)
 
         if user is None:
@@ -22,10 +23,13 @@ class LoginSerializer(serializers.Serializer):
 
         # Generar los tokens JWT
         refresh = RefreshToken.for_user(user)
+        
+        # Retornar los tokens y los datos del usuario, incluyendo el ID
         return {
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'email': user.email,
+            'id': user.id,  # Aquí se agrega el ID del usuario
         }
 
 class CustomUserSerializer(serializers.ModelSerializer):
@@ -45,7 +49,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
             'id': {'read_only': True},  # Esto asegura que el ID no se puede establecer manualmente
             'created_at': {'read_only': True},  # Esto asegura que created_at se establezca automáticamente
         }
-        
+             
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Projects
@@ -62,9 +66,24 @@ class ProjectSerializer(serializers.ModelSerializer):
             'expected_benefits',
             'necessary_requirements',
             'progress',
-            'accepting_applications'
+            "accepting_applications"
         ]
         extra_kwargs = {
             'id': {'read_only': True},   # Esto asegura que el ID no se puede establecer manualmente
         }
+
+class SolicitudSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Solicitudes
+        fields = "__all__"
+
+
+class CollaborationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Collaborations
+        fields = "__all__"
         
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notifications
+        fields = "__all__"
