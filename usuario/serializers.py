@@ -26,12 +26,20 @@ class LoginSerializer(Serializer):
         # Generar los tokens JWT
         refresh = RefreshToken.for_user(user)
         
+        try:
+            custom_user = Users.objects.get(authuser=user)  # Buscar el usuario personalizado por el authuser
+            university_name = custom_user.university  # Extraer el nombre de la universidad
+        except Users.DoesNotExist:
+            university_name = None  # Si no existe la relación, se devuelve None
+
+        
         # Retornar los tokens y los datos del usuario, incluyendo el ID
         return {
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'email': user.email,
             'id': user.id,  # Aquí se agrega el ID del usuario
+            'university': university_name,
         }
 
 class CustomUserSerializer(adrf.serializers.ModelSerializer):
@@ -73,6 +81,7 @@ class ProjectSerializerCreate(adrf.serializers.ModelSerializer):
             'expected_benefits',
             'necessary_requirements',
             'progress',
+            'name_uniuser',
             'accepting_applications',
             'type_aplyuni',
             'creator_name',  # Nombre completo del creador
@@ -118,6 +127,7 @@ class ProjectSerializerAll(adrf.serializers.ModelSerializer):
             'project_type',
             'priority',
             'responsible',
+            'name_uniuser',
             'detailed_description',
             'progress',
             'accepting_applications',
@@ -157,6 +167,7 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
             'project_type',
             'priority',
             'responsible',
+            'name_uniuser',
             'detailed_description',
             'expected_benefits',
             'necessary_requirements',

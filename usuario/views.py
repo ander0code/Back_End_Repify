@@ -349,15 +349,14 @@ class PublicacionViewSet(ViewSet):
         operation_description="Create a new project",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
-            required=['name', 'description', 'project_type', 'responsible', 'priority'],
+            required=['name', 'description', 'project_type', 'priority'],
             properties={
                 'name': openapi.Schema(type=openapi.TYPE_STRING, description='Name of the project'),
                 'description': openapi.Schema(type=openapi.TYPE_STRING, description='Description of the project'),
                 'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='End date of the project'),
                 'status': openapi.Schema(type=openapi.TYPE_STRING, description='Current status of the project'),
-                'project_type': openapi.Schema(type=openapi.TYPE_ARRAY,items=openapi.Items(type=openapi.TYPE_STRING),description="project_type to apply"),
+                'project_type': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description="project_type to apply"),
                 'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Priority level of the project'),
-                'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the user responsible for the project'),
                 'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Detailed description of the project'),
                 'expected_benefits': openapi.Schema(type=openapi.TYPE_STRING, description='Expected benefits of the project'),
                 'necessary_requirements': openapi.Schema(type=openapi.TYPE_STRING, description='Necessary requirements for the project'),
@@ -401,10 +400,16 @@ class PublicacionViewSet(ViewSet):
     @action(detail=False, methods=['POST'], url_path='create_proyect', permission_classes=[IsAuthenticated])
     def create_project(self, request):
         
+        responsible_user_id = request.user.id
+        
+        # Rellenar automáticamente el campo 'responsible' con el ID del usuario autenticado
         project_data = {
-            **request.data,  
-            'start_date': timezone.now().strftime('%Y-%m-%d') # Establece la fecha de creación
+            **request.data,
+            'start_date': timezone.now().strftime('%Y-%m-%d'),  # Fecha de creación
+            'name_uniuser': "",
+            'responsible': responsible_user_id  # Asigna el usuario autenticado como responsable
         }
+    
         # Serializa los datos
         project_serializer = ProjectSerializerCreate(data=project_data)
         
