@@ -5,7 +5,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,GetCollaboratorSerializer,ProjectSerializerID,CollaboratorSerializer
+from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,CollaboratorSerializer,ProjectSerializer
 from rest_framework.decorators import action,permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
@@ -598,6 +598,7 @@ class PublicacionViewSet(ViewSet):
                 'id_user': user.id,
                 'id_project': project_id,
                 'status': 'Pendiente',
+                'name_user': f"{user.first_name} {user.last_name}",
             }
             
             solicitud_serializer = SolicitudSerializer(data=solicitud_data)
@@ -718,8 +719,52 @@ class PublicacionViewSet(ViewSet):
         except Projects.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    def view_project_usercreator():
-        pass
-    def view_project_usercollab():
-        pass     
+    @swagger_auto_schema(
+        operation_description="Obtener proyectos creados por el usuario autenticado",
+        responses={
+            status.HTTP_200_OK: openapi.Response('Lista de proyectos creados por el usuario'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('No se encontraron proyectos'),
+        },
+        tags=["Project Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='my-projects', permission_classes=[IsAuthenticated])
+    def view_project_usercreator(self, request):
+        # Obtener la instancia del modelo Users asociada al usuario autenticado
+        try:
+            user_instance = request.user.id  # Ajusta esto si tu relación es diferente
+        except Users.DoesNotExist:
+            return Response({"message": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
+        # Filtrar proyectos creados por el usuario
+        projects = Projects.objects.filter(responsible=user_instance)
+
+        if projects.exists():
+            serializer = ProjectSerializer(projects, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "No se encontraron proyectos"}, status=status.HTTP_404_NOT_FOUND)
+    
+    @swagger_auto_schema(
+        operation_description="Obtener proyectos en los que el usuario está colaborando",
+        responses={
+            status.HTTP_200_OK: openapi.Response('Lista de proyectos en los que el usuario colabora'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('No se encontraron proyectos'),
+        },
+        tags=["Project Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='my-collaborated-projects', permission_classes=[IsAuthenticated])
+    def view_project_usercollab(self, request):
+        # Obtener la instancia del usuario autenticado
+        user_instance = request.user.id  # Ajusta esto si tu relación es diferente
+
+        # Filtrar colaboraciones del usuario
+        collaborations = Collaborations.objects.filter(user=user_instance)
+
+        # Obtener los proyectos relacionados a las colaboraciones
+        projects = Projects.objects.filter(id__in=collaborations.values_list('project', flat=True))
+
+        if projects.exists():
+            serializer = ProjectSerializer(projects, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "No se encontraron proyectos en los que colabora."}, status=status.HTTP_404_NOT_FOUND)

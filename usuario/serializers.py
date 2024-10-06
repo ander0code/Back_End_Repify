@@ -216,10 +216,24 @@ class CollaboratorSerializer(adrf.serializers.ModelSerializer):
         model = Collaborations
         fields = "__all__"
 
-class GetCollaboratorSerializer(adrf.serializers.ModelSerializer):
-    collaborator_name = serializers.CharField(source='user.authuser.username')  # Nombre del colaborador (relacionado con el modelo `User`)
-    project_name = serializers.CharField(source='project.name')  # Nombre del proyecto
-
+class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Collaborations
-        fields = ['id','collaborator_name', 'project_name', 'role', 'status']
+        model = Projects
+        fields = [
+            'id', 
+            'name', 
+            'description', 
+            'start_date', 
+            'end_date', 
+            'status', 
+            'project_type', 
+            'priority', 
+            'responsible', 
+            'detailed_description', 
+            'type_aplyuni', 
+            'expected_benefits', 
+            'necessary_requirements', 
+            'progress', 
+            'accepting_applications', 
+            'name_uniuser'
+        ]
