@@ -32,7 +32,12 @@ class LoginSerializer(Serializer):
         except Users.DoesNotExist:
             university_name = None  # Si no existe la relación, se devuelve None
 
-        
+        try:
+            custom_user = Users.objects.get(authuser=user)  # Buscar el usuario personalizado por el authuser
+            career_name = custom_user.career  # Extraer el nombre de la universidad
+        except Users.DoesNotExist:
+            career_name = None  # Si no existe la relación, se devuelve None
+
         # Retornar los tokens y los datos del usuario, incluyendo el ID
         return {
             'access': str(refresh.access_token),
@@ -40,6 +45,7 @@ class LoginSerializer(Serializer):
             'email': user.email,
             'id': user.id,  # Aquí se agrega el ID del usuario
             'university': university_name,
+            'career':career_name
         }
 
 class CustomUserSerializer(adrf.serializers.ModelSerializer):
