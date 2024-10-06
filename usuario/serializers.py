@@ -206,14 +206,20 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
             for collab in collaborators if collab.user and collab.user.authuser
         ]
 
-class SolicitudSerializer(Serializer):
+class SolicitudSerializer(adrf.serializers.ModelSerializer):
     class Meta:
         model = Solicitudes
         fields = "__all__"
 
-class CollaborationSerializer(Serializer):
+class CollaboratorSerializer(adrf.serializers.ModelSerializer):
     class Meta:
         model = Collaborations
         fields = "__all__"
 
-#hola
+class GetCollaboratorSerializer(adrf.serializers.ModelSerializer):
+    collaborator_name = serializers.CharField(source='user.authuser.username')  # Nombre del colaborador (relacionado con el modelo `User`)
+    project_name = serializers.CharField(source='project.name')  # Nombre del proyecto
+
+    class Meta:
+        model = Collaborations
+        fields = ['id','collaborator_name', 'project_name', 'role', 'status']
