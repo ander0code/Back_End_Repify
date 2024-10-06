@@ -5,11 +5,11 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,CollaborationSerializer,ProjectSerializerID
+from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,GetCollaboratorSerializer,ProjectSerializerID,CollaboratorSerializer
 from rest_framework.decorators import action,permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
-from usuario.models import Users,Projects,Solicitudes
+from usuario.models import Users,Projects,Solicitudes,Collaborations
 from rest_framework.permissions import AllowAny ,IsAuthenticated
 import random
 
@@ -649,7 +649,7 @@ class PublicacionViewSet(ViewSet):
                 'project': solicitud.id_project.id,
                 'status': 'Activa'
             }
-            collaboration_serializer = CollaborationSerializer(data=collaboration_data)
+            collaboration_serializer = CollaboratorSerializer(data=collaboration_data)
             
             if collaboration_serializer.is_valid():
                 collaboration_serializer.save()
@@ -697,26 +697,29 @@ class PublicacionViewSet(ViewSet):
         except Solicitudes.DoesNotExist:
             return Response({"error": "Solicitud no encontrada"}, status=status.HTTP_404_NOT_FOUND)
       
-    def Notificaion():
-        pass
-    
-    def LimpiarNotifiacion():
-        pass
-    
-    def Colaboradores():
-        pass
-    
-    def FinalizarProyecto():
-        pass
-    
-    def ViewProjectUser():
-        pass
-    
-    def ViewProjectUserAll():
-        pass
-    
-    def FiltroEtiqueta():
-        pass
+    @action(detail=False, methods=['POST'], url_path='project_solicitudes')
+    def get_project_solicitudes(self, request):
+        project_id = request.data.get('project_id')
 
+        if not project_id:
+            return Response({"error": "project_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Verificar si el proyecto existe
+            project = Projects.objects.get(id=project_id)
             
+            # Filtrar solicitudes por proyecto
+            solicitudes = Solicitudes.objects.filter(id_project=project)
+            
+            # Serializar las solicitudes
+            serializer = SolicitudSerializer(solicitudes, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Projects.DoesNotExist:
+            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def view_project_usercreator():
+        pass
+    def view_project_usercollab():
+        pass     
 
