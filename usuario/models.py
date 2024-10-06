@@ -61,6 +61,7 @@ class Solicitudes(models.Model):
     id_user = models.ForeignKey('Users', models.DO_NOTHING, db_column='id_user', blank=True, null=True)
     id_project = models.ForeignKey(Projects, models.DO_NOTHING, db_column='id_project', blank=True, null=True)
     status = models.TextField()
+    name_user = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
