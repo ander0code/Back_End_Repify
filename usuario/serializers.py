@@ -71,6 +71,8 @@ class ProjectSerializerCreate(adrf.serializers.ModelSerializer):
     collaboration_count = serializers.SerializerMethodField()  # Cantidad de colaboradores
     collaborators = serializers.SerializerMethodField()  # Nombres de los colaboradores
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
+    objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
+    necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     
     class Meta:
         model = Projects
@@ -84,7 +86,7 @@ class ProjectSerializerCreate(adrf.serializers.ModelSerializer):
             'priority',
             'responsible',
             'detailed_description',
-            'expected_benefits',
+            'objectives',
             'necessary_requirements',
             'progress',
             'name_uniuser',
@@ -120,7 +122,7 @@ class ProjectSerializerAll(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField()  # Nombre completo del creador
     collaboration_count = serializers.SerializerMethodField()  # Cantidad de colaboradores
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
-    
+
     class Meta:
         model = Projects
         fields = [
@@ -160,7 +162,9 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
     collaboration_count = serializers.SerializerMethodField()  # Cantidad de colaboradores
     collaborators = serializers.SerializerMethodField()  # Nombres de los colaboradores
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
-    
+    objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
+    necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
+        
     class Meta:
         model = Projects
         fields = [
@@ -178,6 +182,7 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
             'expected_benefits',
             'necessary_requirements',
             'progress',
+            'necessary_requirements',
             'accepting_applications',
             'type_aplyuni',
             'creator_name',  # Nombre completo del creador
@@ -216,7 +221,10 @@ class CollaboratorSerializer(adrf.serializers.ModelSerializer):
         model = Collaborations
         fields = "__all__"
 
-class ProjectSerializer(serializers.ModelSerializer):
+class ProjectSerializer(adrf.serializers.ModelSerializer):
+    objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
+    necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
+    
     class Meta:
         model = Projects
         fields = [
@@ -231,7 +239,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             'responsible', 
             'detailed_description', 
             'type_aplyuni', 
-            'expected_benefits', 
+            'objectives', 
             'necessary_requirements', 
             'progress', 
             'accepting_applications', 
