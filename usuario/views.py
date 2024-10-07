@@ -339,8 +339,17 @@ class LoginViewSet(ViewSet):
         auth_user.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-    
+ 
+    @action(detail=False, methods=['POST'], url_path='Logout', permission_classes=[IsAuthenticated])
+    def Logout(self, request):
+        try:
+            refresh_token = request.data.get("refresh")
+            token = RefreshToken(refresh_token)
+            token.blacklist()  # Blacklist the token
+            
+            return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class PublicacionViewSet(ViewSet):
     
