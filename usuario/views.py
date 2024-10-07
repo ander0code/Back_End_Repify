@@ -5,7 +5,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,CollaboratorSerializer,ProjectSerializer
+from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,CollaboratorSerializer,ProjectSerializer, NotificationSerializer
 from rest_framework.decorators import action,permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
@@ -574,7 +574,7 @@ class PublicacionViewSet(ViewSet):
             required=['project_id'],
             properties={
                 'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto'),
-                'user_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del Postulate'),
+                
             }
         ),
         responses={
@@ -611,7 +611,8 @@ class PublicacionViewSet(ViewSet):
     @action(detail=False, methods=['POST'], url_path='ApplyProject')#, permission_classes=[IsAuthenticated]
     def ApplyProject(self, request):
         project_id = request.data.get('project_id')
-        user_id = request.data.get('user_id')
+        user = request.user
+        
 
         try:
             # Verificar si el proyecto acepta aplicaciones
@@ -621,7 +622,7 @@ class PublicacionViewSet(ViewSet):
             
             # Crear la solicitud
             solicitud_data = {
-                'id_user': user_id,
+                'id_user': user.id,
                 'id_project': project_id,
                 'status': 'Pendiente',
                 'name_user': f"{user.first_name} {user.last_name}",
