@@ -5,12 +5,11 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, CustomUserSerializer, ProjectSerializer,SolicitudSerializer,CollaborationSerializer, NotificationSerializer
-from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,CollaborationSerializer,ProjectSerializerID
+from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,CollaboratorSerializer,ProjectSerializer
 from rest_framework.decorators import action,permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
-from usuario.models import Users,Projects,Solicitudes
+from usuario.models import Users,Projects,Solicitudes,Collaborations
 from rest_framework.permissions import AllowAny ,IsAuthenticated
 import random
 
@@ -350,15 +349,14 @@ class PublicacionViewSet(ViewSet):
         operation_description="Create a new project",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
-            required=['name', 'description', 'project_type', 'responsible', 'priority'],
+            required=['name', 'description', 'project_type', 'priority'],
             properties={
                 'name': openapi.Schema(type=openapi.TYPE_STRING, description='Name of the project'),
                 'description': openapi.Schema(type=openapi.TYPE_STRING, description='Description of the project'),
                 'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='End date of the project'),
                 'status': openapi.Schema(type=openapi.TYPE_STRING, description='Current status of the project'),
-                'project_type': openapi.Schema(type=openapi.TYPE_ARRAY,items=openapi.Items(type=openapi.TYPE_STRING),description="project_type to apply"),
+                'project_type': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description="project_type to apply"),
                 'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Priority level of the project'),
-                'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the user responsible for the project'),
                 'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Detailed description of the project'),
                 'expected_benefits': openapi.Schema(type=openapi.TYPE_STRING, description='Expected benefits of the project'),
                 'necessary_requirements': openapi.Schema(type=openapi.TYPE_STRING, description='Necessary requirements for the project'),
@@ -402,10 +400,16 @@ class PublicacionViewSet(ViewSet):
     @action(detail=False, methods=['POST'], url_path='create_proyect', permission_classes=[IsAuthenticated])
     def create_project(self, request):
         
+        responsible_user_id = request.user.id
+        
+        # Rellenar automáticamente el campo 'responsible' con el ID del usuario autenticado
         project_data = {
-            **request.data,  
-            'start_date': timezone.now().strftime('%Y-%m-%d') # Establece la fecha de creación
+            **request.data,
+            'start_date': timezone.now().strftime('%Y-%m-%d'),  # Fecha de creación
+            'name_uniuser': "",
+            'responsible': responsible_user_id  # Asigna el usuario autenticado como responsable
         }
+    
         # Serializa los datos
         project_serializer = ProjectSerializerCreate(data=project_data)
         
@@ -620,6 +624,7 @@ class PublicacionViewSet(ViewSet):
                 'id_user': user_id,
                 'id_project': project_id,
                 'status': 'Pendiente',
+                'name_user': f"{user.first_name} {user.last_name}",
             }
             
             solicitud_serializer = SolicitudSerializer(data=solicitud_data)
@@ -686,7 +691,7 @@ class PublicacionViewSet(ViewSet):
                 'project': solicitud.id_project.id,
                 'status': 'Activa'
             }
-            collaboration_serializer = CollaborationSerializer(data=collaboration_data)
+            collaboration_serializer = CollaboratorSerializer(data=collaboration_data)
             
             if collaboration_serializer.is_valid():
                 collaboration_serializer.save()
@@ -734,26 +739,73 @@ class PublicacionViewSet(ViewSet):
         except Solicitudes.DoesNotExist:
             return Response({"error": "Solicitud no encontrada"}, status=status.HTTP_404_NOT_FOUND)
       
-    def Notificaion():
-        pass
-    
-    def LimpiarNotifiacion():
-        pass
-    
-    def Colaboradores():
-        pass
-    
-    def FinalizarProyecto():
-        pass
-    
-    def ViewProjectUser():
-        pass
-    
-    def ViewProjectUserAll():
-        pass
-    
-    def FiltroEtiqueta():
-        pass
+    @action(detail=False, methods=['POST'], url_path='project_solicitudes')
+    def get_project_solicitudes(self, request):
+        project_id = request.data.get('project_id')
 
+        if not project_id:
+            return Response({"error": "project_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Verificar si el proyecto existe
+            project = Projects.objects.get(id=project_id)
             
+            # Filtrar solicitudes por proyecto
+            solicitudes = Solicitudes.objects.filter(id_project=project)
+            
+            # Serializar las solicitudes
+            serializer = SolicitudSerializer(solicitudes, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
+        except Projects.DoesNotExist:
+            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    @swagger_auto_schema(
+        operation_description="Obtener proyectos creados por el usuario autenticado",
+        responses={
+            status.HTTP_200_OK: openapi.Response('Lista de proyectos creados por el usuario'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('No se encontraron proyectos'),
+        },
+        tags=["Project Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='my-projects', permission_classes=[IsAuthenticated])
+    def view_project_usercreator(self, request):
+        # Obtener la instancia del modelo Users asociada al usuario autenticado
+        try:
+            user_instance = request.user.id  # Ajusta esto si tu relación es diferente
+        except Users.DoesNotExist:
+            return Response({"message": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Filtrar proyectos creados por el usuario
+        projects = Projects.objects.filter(responsible=user_instance)
+
+        if projects.exists():
+            serializer = ProjectSerializer(projects, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "No se encontraron proyectos"}, status=status.HTTP_404_NOT_FOUND)
+    
+    @swagger_auto_schema(
+        operation_description="Obtener proyectos en los que el usuario está colaborando",
+        responses={
+            status.HTTP_200_OK: openapi.Response('Lista de proyectos en los que el usuario colabora'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('No se encontraron proyectos'),
+        },
+        tags=["Project Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='my-collaborated-projects', permission_classes=[IsAuthenticated])
+    def view_project_usercollab(self, request):
+        # Obtener la instancia del usuario autenticado
+        user_instance = request.user.id  # Ajusta esto si tu relación es diferente
+
+        # Filtrar colaboraciones del usuario
+        collaborations = Collaborations.objects.filter(user=user_instance)
+
+        # Obtener los proyectos relacionados a las colaboraciones
+        projects = Projects.objects.filter(id__in=collaborations.values_list('project', flat=True))
+
+        if projects.exists():
+            serializer = ProjectSerializer(projects, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "No se encontraron proyectos en los que colabora."}, status=status.HTTP_404_NOT_FOUND)

@@ -49,6 +49,7 @@ class Projects(models.Model):
     necessary_requirements = models.TextField(blank=True, null=True)
     progress = models.IntegerField(blank=True, null=True)
     accepting_applications = models.BooleanField(blank=True, null=True)
+    name_uniuser = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -60,6 +61,7 @@ class Solicitudes(models.Model):
     id_user = models.ForeignKey('Users', models.DO_NOTHING, db_column='id_user', blank=True, null=True)
     id_project = models.ForeignKey(Projects, models.DO_NOTHING, db_column='id_project', blank=True, null=True)
     status = models.TextField()
+    name_user = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
@@ -100,6 +102,7 @@ class Users(models.Model):
     authuser = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True)
     reset_code = models.IntegerField(blank=True, null=True)
     reset_code_created_at = models.DateTimeField(blank=True, null=True)
+
 
     class Meta:
         managed = False
