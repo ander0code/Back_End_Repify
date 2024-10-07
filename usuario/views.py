@@ -340,8 +340,7 @@ class LoginViewSet(ViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def VerInfo():
-        pass
+    
 
 class PublicacionViewSet(ViewSet):
     
@@ -698,7 +697,7 @@ class PublicacionViewSet(ViewSet):
         except Solicitudes.DoesNotExist:
             return Response({"error": "Solicitud no encontrada"}, status=status.HTTP_404_NOT_FOUND)
       
-    @action(detail=False, methods=['POST'], url_path='project_solicitudes')
+    @action(detail=False, methods=['POST'], url_path='project_solicitudes',permission_classes=[IsAuthenticated])
     def get_project_solicitudes(self, request):
         project_id = request.data.get('project_id')
 
