@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'adrf',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',  # required for serving swagger ui's css/js files
     'drf_yasg',
     'usuario'
@@ -161,11 +162,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=10),  # Duración del token de acceso
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),    # Duración del token de refresco
-    'ROTATE_REFRESH_TOKENS': True,
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': False,  # Enable token blacklisting
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }
-
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
