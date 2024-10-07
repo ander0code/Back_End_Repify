@@ -346,6 +346,9 @@ class LoginViewSet(ViewSet):
             refresh_token = request.data.get("refresh")
             token = RefreshToken(refresh_token)
             token.blacklist()  # Blacklist the token
+                    # Actualiza el timestamp de logout del usuario
+            request.user.logout_timestamp = timezone.now()
+            request.user.save()
             
             return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
         except Exception as e:
