@@ -221,6 +221,8 @@ class CollaboratorSerializer(adrf.serializers.ModelSerializer):
 class ProjectSerializer(adrf.serializers.ModelSerializer):
     objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
+    collaboration_count = serializers.SerializerMethodField()
+    collaborators = serializers.SerializerMethodField()
     
     class Meta:
         model = Projects
@@ -240,5 +242,19 @@ class ProjectSerializer(adrf.serializers.ModelSerializer):
             'necessary_requirements', 
             'progress', 
             'accepting_applications', 
-            'name_uniuser'
+            'name_uniuser',
+            'collaboration_count',
+            'collaborators'
+        ]
+        
+    def get_collaboration_count(self, obj):
+        # Contar la cantidad de colaboradores relacionados con el proyecto
+        return Collaborations.objects.filter(project=obj).count()
+
+    def get_collaborators(self, obj):
+        # Obtener los nombres completos de los colaboradores asociados al proyecto
+        collaborators = Collaborations.objects.filter(project=obj).select_related('user__authuser')
+        return [
+            f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
+            for collab in collaborators if collab.user and collab.user.authuser
         ]
