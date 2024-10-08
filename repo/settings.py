@@ -57,7 +57,6 @@ INSTALLED_APPS = [
     'corsheaders',
     'adrf',
     'rest_framework',
-    'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',  # required for serving swagger ui's css/js files
     'drf_yasg',
     'usuario'
