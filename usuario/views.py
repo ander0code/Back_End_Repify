@@ -413,11 +413,13 @@ class PublicacionViewSet(ViewSet):
         
         responsible_user_id = request.user.id
         
+        custom_user = Users.objects.get(authuser=responsible_user_id)
+        
         # Rellenar automáticamente el campo 'responsible' con el ID del usuario autenticado
         project_data = {
             **request.data,
             'start_date': timezone.now().strftime('%Y-%m-%d'),  # Fecha de creación
-            'name_uniuser': "",
+            'name_uniuser': custom_user.university if custom_user.university else "",
             'responsible': responsible_user_id  # Asigna el usuario autenticado como responsable
         }
     
