@@ -9,6 +9,7 @@ from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSeri
 from rest_framework.decorators import action,permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
+from django.shortcuts import get_object_or_404
 from usuario.models import Users,Projects,Solicitudes,Collaborations
 from rest_framework.permissions import AllowAny ,IsAuthenticated
 import random
@@ -356,6 +357,8 @@ class LoginViewSet(ViewSet):
 
 class PublicacionViewSet(ViewSet):
     
+    # fUNCIONES GENERALES
+    
     @swagger_auto_schema(
         operation_description="Create a new project",
         request_body=openapi.Schema(
@@ -580,6 +583,8 @@ class PublicacionViewSet(ViewSet):
         
         return Response(serializer.data, status=status.HTTP_200_OK)
         
+    #Postulaziones    
+        
     @swagger_auto_schema(
         operation_description="Aplicar a un proyecto",
         request_body=openapi.Schema(
@@ -709,8 +714,8 @@ class PublicacionViewSet(ViewSet):
             return Response({"mensaje": "Solicitud negada exitosamente"}, status=status.HTTP_200_OK)
         
         except Solicitudes.DoesNotExist:
-            return Response({"error": "Solicitud no encontrada"}, status=status.HTTP_404_NOT_FOUND)
-      
+            return Response({"error": "Solicitud no encontrada"}, status=status.HTTP_404_NOT_FOUND)  
+    
     @action(detail=False, methods=['POST'], url_path='project_solicitudes',permission_classes=[IsAuthenticated])
     def get_project_solicitudes(self, request):
         project_id = request.data.get('project_id')
@@ -731,6 +736,8 @@ class PublicacionViewSet(ViewSet):
 
         except Projects.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    #--------------------------------------------
 
     @swagger_auto_schema(
         operation_description="Obtener proyectos creados por el usuario autenticado",
@@ -758,6 +765,45 @@ class PublicacionViewSet(ViewSet):
             return Response({"message": "No se encontraron proyectos"}, status=status.HTTP_404_NOT_FOUND)
     
     @swagger_auto_schema(
+        operation_description="Obtener un proyecto específico pasando el ID del proyecto en el cuerpo de la solicitud",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto'),
+            },
+            required=['project_id']
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response('Proyecto encontrado'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Proyecto no encontrado'),
+        },
+        tags=["Project Management"]
+    )
+    @action(detail=False, methods=['POST'], url_path='get-project-id', permission_classes=[IsAuthenticated])
+    def view_project_by_body(self, request):
+        # Extraer el ID del proyecto del cuerpo de la solicitud
+        project_id = request.data.get('id_project')
+        if not project_id:
+            return Response({"message": "ID del proyecto es requerido."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Obtener la instancia del usuario autenticado
+        user_instance = request.user.id
+
+        # Buscar el proyecto por su ID y verificar que el responsable es el usuario autenticado
+        project = get_object_or_404(Projects, id=project_id, responsible=user_instance)
+
+        # Serializar el proyecto encontrado
+        serializer = ProjectSerializer(project)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)    
+    
+    
+    
+    
+    
+    
+    
+    @swagger_auto_schema(
         operation_description="Obtener proyectos en los que el usuario está colaborando",
         responses={
             status.HTTP_200_OK: openapi.Response('Lista de proyectos en los que el usuario colabora'),
@@ -781,3 +827,6 @@ class PublicacionViewSet(ViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response({"message": "No se encontraron proyectos en los que colabora."}, status=status.HTTP_404_NOT_FOUND)
+
+
+
