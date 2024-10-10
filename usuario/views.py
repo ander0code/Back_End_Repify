@@ -5,7 +5,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,CollaboratorSerializer,ProjectSerializer
+from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,CollaboratorSerializer,ProjectSerializer,ProjectUpdateSerializer
 from rest_framework.decorators import action,permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
@@ -797,6 +797,59 @@ class PublicacionViewSet(ViewSet):
         
         return Response(serializer.data, status=status.HTTP_200_OK)    
     
+    @swagger_auto_schema(
+        operation_description="Actualizar un proyecto específico pasando el ID y los datos del proyecto en el cuerpo de la solicitud",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto'),
+                'name': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del proyecto'),
+                'description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción del proyecto'),
+                'start_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de inicio'),
+                'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de finalización'),
+                'status': openapi.Schema(type=openapi.TYPE_STRING, description='Estado del proyecto'),
+                'project_type': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de proyecto'),
+                'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Prioridad del proyecto'),
+                'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del responsable'),
+                'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción detallada'),
+                'objectives': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description='Objetivos'),
+                'necessary_requirements': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description='Requisitos necesarios'),
+                'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progreso del proyecto'),
+                'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Si está aceptando aplicaciones'),
+                'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de aplicación')
+            },
+            required=['project_id']  # El ID del proyecto es obligatorio
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response('Proyecto actualizado correctamente'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Proyecto no encontrado'),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Datos inválidos'),
+        },
+        tags=["Project Management"]
+    )
+    @action(detail=False, methods=['PUT'], url_path='update-project', permission_classes=[IsAuthenticated])
+    def update_project_by_body(self, request):
+        # Extraer el ID del proyecto del cuerpo de la solicitud
+        project_id = request.data.get('project_id')
+        if not project_id:
+            return Response({"message": "ID del proyecto es requerido."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Obtener la instancia del usuario autenticado
+        user_instance = request.user.id
+
+        # Buscar el proyecto por su ID y verificar que el responsable es el usuario autenticado
+        project = get_object_or_404(Projects, id=project_id, responsible=user_instance)
+
+        # Serializar los datos de actualización
+        serializer = ProjectUpdateSerializer(project, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+
     
     
     

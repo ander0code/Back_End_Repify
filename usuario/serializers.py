@@ -258,3 +258,27 @@ class ProjectSerializer(adrf.serializers.ModelSerializer):
             f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
             for collab in collaborators if collab.user and collab.user.authuser
         ]
+        
+class ProjectUpdateSerializer(adrf.serializers.ModelSerializer):
+    objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
+    necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
+
+    class Meta:
+        model = Projects
+        fields = [
+            'name', 
+            'description', 
+            'start_date', 
+            'end_date', 
+            'status', 
+            'project_type', 
+            'priority', 
+            'responsible', 
+            'detailed_description', 
+            'type_aplyuni', 
+            'objectives', 
+            'necessary_requirements', 
+            'progress', 
+            'accepting_applications', 
+            'name_uniuser'
+        ]
