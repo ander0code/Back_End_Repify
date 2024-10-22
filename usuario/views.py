@@ -106,7 +106,7 @@ class LoginViewSet(ViewSet):
         tags=["User Management"]
     )
     @action(detail=False, methods=['POST'], url_path='Register', permission_classes=[AllowAny])
-    def register(self, request):
+    async def register(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
         first_name = request.data.get("first_name") 
@@ -117,7 +117,9 @@ class LoginViewSet(ViewSet):
         
   
         # Crear el usuario en auth_user
-        user = User.objects.create_user(username=email, email=email, password=password,first_name=first_name, last_name=last_name )
+        user = await sync_to_async(User.objects.create_user)(
+            username=email, email=email, password=password,first_name=first_name, last_name=last_name 
+            )
 
 
         # Ahora crea la entrada en la tabla Users
@@ -129,8 +131,8 @@ class LoginViewSet(ViewSet):
         
         users_serializer = CustomUserSerializer(data=users_data)
         
-        if users_serializer.is_valid():
-            users_serializer.save()  # Guarda la instancia
+        if await sync_to_async(users_serializer.is_valid)((raise_exception=False)):
+            await sync_to_async(users_serializer.save)()  # Guarda la instancia
             
             # Generar el token JWT
             refresh = RefreshToken.for_user(user)
@@ -164,7 +166,7 @@ class LoginViewSet(ViewSet):
             tags=["User Management"]
         )
     @action(detail=False, methods=['POST'], url_path='request-password-reset', permission_classes=[AllowAny])
-    def request_password_reset(self, request):
+    async def request_password_reset(self, request):
         email = request.data.get("email")
 
         if not email:
@@ -172,16 +174,16 @@ class LoginViewSet(ViewSet):
 
         try:
             # Obtener el usuario basado en el correo electrónico
-            user = User.objects.get(email=email)
+            user = await sync_to_async(User.objects.get)(email=email)
 
             # Generar un código de 6 dígitos
             reset_code = random.randint(100000, 999999)
 
             # Almacenar el código y la fecha en el modelo Users
-            user_profile = Users.objects.get(authuser=user) # Asegúrate de que tienes acceso al perfil del usuario
+            user_profile = await sync_to_async(Users.objects.get)(authuser=user) # Asegúrate de que tienes acceso al perfil del usuario
             user_profile.reset_code = reset_code
             user_profile.reset_code_created_at = timezone.now()
-            user_profile.save()
+            await sync_to_async(user_profile.save)()
 
             # Enviar el correo electrónico con el código de restablecimiento
             send_mail(
@@ -223,27 +225,27 @@ class LoginViewSet(ViewSet):
         tags=["User Management"]
     )
     @action(detail=False, methods=['POST'], url_path='reset_password', permission_classes=[AllowAny])
-    def reset_password(self, request):
+    async def reset_password(self, request):
         email = request.data.get("email")
         reset_code = request.data.get("reset_code")
         new_password = request.data.get("new_password")
         
         try:
             # Obtener el usuario por email desde auth_user
-            user = User.objects.get(email=email)
+            user = await sync_to_async(User.objects.get)(email=email)
             
             # Obtener el perfil del usuario
-            user_profile = Users.objects.get(authuser=user)
+            user_profile = await sync_to_async(Users.objects.get)(authuser=user)
 
             # Verificar si el código de restablecimiento es correcto
             if user_profile.reset_code == reset_code:
                 # Cambiar la contraseña
                 user.set_password(new_password)
-                user.save() 
+                await sync_to_async(user.save)() 
                 
                 # Limpiar el código de restablecimiento
                 user_profile.reset_code = None
-                user_profile.save()  # Guardar los cambios en el perfil
+                await sync_to_async(user_profile.save)()  # Guardar los cambios en el perfil
                 
                 return Response({"message": "Password successfully reset"}, status=status.HTTP_200_OK)
             else:
@@ -289,11 +291,11 @@ class LoginViewSet(ViewSet):
         tags=["User Management"]
     )
     @action(detail=False, methods=['PUT'], url_path='update-profile')
-    def update_user_profile(self, request):
+    async def update_user_profile(self, request):
         user_id = request.data.get('id')
         try:
             # Obtener el perfil de usuario usando el ID (pk)
-            user_profile = Users.objects.get(pk=user_id)
+            user_profile = await sync_to_async(Users.objects.get)(pk=user_id)
         except Users.DoesNotExist:
             return Response({"error": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -301,7 +303,7 @@ class LoginViewSet(ViewSet):
         serializer = CustomUserSerializer(user_profile, data=request.data, partial=True)
 
         if serializer.is_valid():
-            serializer.save()  # Guarda las actualizaciones
+            await sync_to_async(serializer.save)()  # Guarda las actualizaciones
             return Response(serializer.data, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -322,11 +324,11 @@ class LoginViewSet(ViewSet):
         tags=["User Management"]
     )
     @action(detail=False, methods=['DELETE'], url_path='delete-user')
-    def delete_user(self, request):
+    async def delete_user(self, request):
         user_id = request.data.get('id')
         try:
             # Buscar al usuario en la tabla Users por su ID (pk)
-            user_profile = Users.objects.get(pk=user_id)
+            user_profile = await sync_to_async(Users.objects.get)(pk=user_id)
             
             # Obtener el usuario en la tabla auth_user
             auth_user = user_profile.authuser  # Asumiendo que 'authuser' es una FK a User
@@ -335,26 +337,13 @@ class LoginViewSet(ViewSet):
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
         # Eliminar el perfil del usuario en la tabla personalizada Users
-        user_profile.delete()
+        await sync_to_async(user_profile.delete)()
 
         # Eliminar el usuario en la tabla auth_user
-        auth_user.delete()
+        await sync_to_async(auth_user.delete)()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
  
-    @action(detail=False, methods=['POST'], url_path='Logout', permission_classes=[IsAuthenticated])
-    def Logout(self, request):
-        try:
-            refresh_token = request.data.get("refresh")
-            token = RefreshToken(refresh_token)
-            token.blacklist()  # Blacklist the token
-                    # Actualiza el timestamp de logout del usuario
-            request.user.logout_timestamp = timezone.now()
-            request.user.save()
-            
-            return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class PublicacionViewSet(ViewSet):
     
