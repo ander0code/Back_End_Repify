@@ -162,7 +162,6 @@ class ProjectSerializerAll(adrf.serializers.ModelSerializer):
 class ProjectSerializerID(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField()  # Nombre completo del creador
     collaboration_count = serializers.SerializerMethodField()  # Cantidad de colaboradores
-    collaborators = serializers.SerializerMethodField()  # Nombres de los colaboradores
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
@@ -181,7 +180,7 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
             'responsible',
             'name_uniuser',
             'detailed_description',
-            'objectives',
+            'expected_benefits',
             'necessary_requirements',
             'progress',
             'necessary_requirements',
@@ -189,7 +188,6 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
             'type_aplyuni',
             'creator_name',  # Nombre completo del creador
             'collaboration_count',  # Cantidad de colaboradores
-            'collaborators'  # Lista de nombres de los colaboradores
         ]
         extra_kwargs = {
             'id': {'read_only': True},
@@ -214,9 +212,10 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
         ]
 
 class SolicitudSerializer(adrf.serializers.ModelSerializer):
+    
     class Meta:
         model = Solicitudes
-        fields = "__all__"
+        fields = ["id_solicitud","id_user","id_project","status","name_user","name_lider","created_at"]
 
 class CollaboratorSerializer(adrf.serializers.ModelSerializer):
     class Meta:
@@ -231,11 +230,54 @@ class NotificationSerializer(serializers.ModelSerializer):
 class ProjectSerializer(adrf.serializers.ModelSerializer):
     objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
-    
+    collaboration_count = serializers.SerializerMethodField()
+    collaborators = serializers.SerializerMethodField()
+    name_responsible = serializers.SerializerMethodField()
+
     class Meta:
         model = Projects
         fields = [
-            'id', 
+            'id',
+            'name',
+            'description',
+            'start_date',
+            'end_date',
+            'status',
+            'project_type',
+            'priority',
+            'responsible',
+            'name_responsible',  # Agregar el nombre del responsable
+            'detailed_description',
+            'type_aplyuni',
+            'objectives',
+            'necessary_requirements',
+            'progress',
+            'accepting_applications',
+            'name_uniuser',
+            'collaboration_count',
+            'collaborators'
+        ]
+    
+    def get_name_responsible(self, obj):
+        # Obtener el nombre completo del responsable (creador) del proyecto
+        return f"{obj.responsible.authuser.first_name} {obj.responsible.authuser.last_name}"
+    
+    def get_collaboration_count(self, obj):
+        return Collaborations.objects.filter(project=obj).count()
+
+    def get_collaborators(self, obj):
+        collaborators = Collaborations.objects.filter(project=obj).select_related('user__authuser')
+        return [
+            f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
+            for collab in collaborators if collab.user and collab.user.authuser
+        ]
+class ProjectUpdateSerializer(adrf.serializers.ModelSerializer):
+    objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
+    necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
+
+    class Meta:
+        model = Projects
+        fields = [
             'name', 
             'description', 
             'start_date', 
