@@ -10,9 +10,6 @@ from django.contrib.auth.models import User
 from django.contrib.postgres.fields import ArrayField
 
 
-
-
-
 class Collaborations(models.Model):
     id = models.BigAutoField(primary_key=True)
     user = models.ForeignKey('Users', models.DO_NOTHING, blank=True, null=True)
@@ -66,6 +63,7 @@ class Solicitudes(models.Model):
     id_project = models.ForeignKey(Projects, models.DO_NOTHING, db_column='id_project', blank=True, null=True)
     status = models.TextField()
     name_user = models.TextField(blank=True, null=True)
+    name_lider = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:

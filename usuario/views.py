@@ -610,11 +610,22 @@ class PublicacionViewSet(ViewSet):
             project = Projects.objects.get(id=project_id)
             if not project.accepting_applications:
                 return Response({"error": "Este proyecto no está aceptando aplicaciones"}, status=status.HTTP_400_BAD_REQUEST)
-            
+
+            # Obtener el ID del líder del proyecto (responsible)
+            lider_id = project.responsible_id  # Suponiendo que el campo 'responsible' es un ForeignKey
+
+            # Conectar con la tabla auth_user para obtener los datos del líder
+            lider = User.objects.get(id=lider_id)  # auth_user se mapea al modelo 'User' de Django
+
+            # Obtener el nombre completo del líder
+            name_lider = f"{lider.first_name} {lider.last_name}"
+
             # Crear la solicitud
             solicitud_data = {
                 'id_user': user.id,
-                'id_project': project_id,
+                'name_lider': name_lider,
+                'created_at': timezone.now().strftime('%Y-%m-%d'),
+                'id_project':project.id,
                 'status': 'Pendiente',
                 'name_user': f"{user.first_name} {user.last_name}",
             }
@@ -847,14 +858,7 @@ class PublicacionViewSet(ViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    
 
-    
-    
-    
-    
-    
     
     @swagger_auto_schema(
         operation_description="Obtener proyectos en los que el usuario está colaborando",
