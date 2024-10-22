@@ -163,7 +163,6 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField()  # Nombre completo del creador
     collaboration_count = serializers.SerializerMethodField()  # Cantidad de colaboradores
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
-    objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
         
     class Meta:
@@ -180,7 +179,6 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
             'responsible',
             'name_uniuser',
             'detailed_description',
-            'expected_benefits',
             'necessary_requirements',
             'progress',
             'necessary_requirements',
