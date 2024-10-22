@@ -23,11 +23,12 @@ class Collaborations(models.Model):
 
 
 class Notifications(models.Model):
-    user_id = models.BigAutoField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     sender= models.ForeignKey('Users', models.DO_NOTHING, blank=True, null=True)
     message = models.TextField(blank=True, null=True)
     is_read = models.IntegerField(blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
+    user_id = models.IntegerField(blank=True, null=True)
 
     class Meta:
         managed = False

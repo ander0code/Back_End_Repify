@@ -626,7 +626,7 @@ class PublicacionViewSet(ViewSet):
         },
         tags=["Notificacions Project Management"]
     )
-    @action(detail=False, methods=['POST'], url_path='ApplyProject')
+    @action(detail=False, methods=['POST'], url_path='ApplyProject', permission_classes=[IsAuthenticated])
     def ApplyProject(self, request):
         project_id = request.data.get('project_id')
         user = request.user
@@ -638,7 +638,10 @@ class PublicacionViewSet(ViewSet):
             if not project.accepting_applications:
                 return Response({"error": "Este proyecto no está aceptando aplicaciones"}, status=status.HTTP_400_BAD_REQUEST)
 
-            
+            # Verificar si ya existe una solicitud para este proyecto y usuario
+            existing_solicitud = Solicitudes.objects.filter(id_user=user.id, id_project=project_id).first()
+            if existing_solicitud:
+                return Response({"error": "Ya has aplicado a este proyecto."}, status=status.HTTP_400_BAD_REQUEST)
 
             # Obtener el ID del líder del proyecto (responsible)
             lider_id = project.responsible_id  # Suponiendo que el campo 'responsible' es un ForeignKey
@@ -657,21 +660,23 @@ class PublicacionViewSet(ViewSet):
                 'id_project': project.id,
                 'status': 'Pendiente',
                 'name_project': project.name,
-                'name_user': "jose",
+                'name_user': f"{user.first_name} {user.last_name}",
             }
 
             solicitud_serializer = SolicitudSerializer(data=solicitud_data)
 
             if solicitud_serializer.is_valid():
                 solicitud_serializer.save()
+                print(user.id)
                 
+                user_proyect = Projects.objects.get(id=project_id)
                 # Crear la notificación para el propietario del proyecto
                 notification_data = {
-                    'user_id': 2,  # Usuario responsable del proyecto
-                    'sender': 1,  # Usuario que aplica
-                    'message': "notification_message",
+                    'sender': lider_id,  
+                    'message': f"{user.first_name} {user.last_name} aplico al proyecto",
                     'is_read': 0,
-                    'created_at': timezone.now()
+                    'created_at': timezone.now(),
+                    'user_id': user.id
                 }
                 notification_serializer = NotificationSerializer(data=notification_data)
                 
