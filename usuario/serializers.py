@@ -209,9 +209,10 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
         ]
 
 class SolicitudSerializer(adrf.serializers.ModelSerializer):
+    
     class Meta:
         model = Solicitudes
-        fields = "__all__"
+        fields = ["id_solicitud","id_user","id_project","status","name_user","name_lider","created_at"]
 
 class CollaboratorSerializer(adrf.serializers.ModelSerializer):
     class Meta:
