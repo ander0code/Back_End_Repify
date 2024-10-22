@@ -115,9 +115,9 @@ class LoginViewSet(ViewSet):
         if not email or not password:
             return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
         
-        nombre_completo = first_name," ",last_name
+  
         # Crear el usuario en auth_user
-        user = User.objects.create_user(username=nombre_completo, email=email, password=password,first_name=first_name, last_name=last_name )
+        user = User.objects.create_user(username=email, email=email, password=password,first_name=first_name, last_name=last_name )
 
 
         # Ahora crea la entrada en la tabla Users
