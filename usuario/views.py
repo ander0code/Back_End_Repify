@@ -131,7 +131,7 @@ class LoginViewSet(ViewSet):
         
         users_serializer = CustomUserSerializer(data=users_data)
         
-        if await sync_to_async(users_serializer.is_valid)((raise_exception=False)):
+        if await sync_to_async(users_serializer.is_valid)(raise_exception=False):
             await sync_to_async(users_serializer.save)()  # Guarda la instancia
             
             # Generar el token JWT
