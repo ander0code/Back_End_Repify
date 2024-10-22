@@ -211,9 +211,11 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
 
 class SolicitudSerializer(adrf.serializers.ModelSerializer):
     
+    created_at = serializers.DateField(format="%Y-%m-%d")
+    
     class Meta:
         model = Solicitudes
-        fields = ["id_solicitud","id_user","id_project","status","name_user","name_lider","created_at"]
+        fields = ["id_solicitud","id_user","id_project","status","name_user","name_lider","name_project","created_at"]
 
 class CollaboratorSerializer(adrf.serializers.ModelSerializer):
     class Meta:

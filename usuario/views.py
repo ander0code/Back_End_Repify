@@ -626,7 +626,7 @@ class PublicacionViewSet(ViewSet):
         },
         tags=["Notificacions Project Management"]
     )
-    @action(detail=False, methods=['POST'], url_path='ApplyProject')#, permission_classes=[IsAuthenticated]
+    @action(detail=False, methods=['POST'], url_path='ApplyProject',permission_classes=[IsAuthenticated])
     def ApplyProject(self, request):
         project_id = request.data.get('project_id')
         user = request.user
@@ -637,6 +637,11 @@ class PublicacionViewSet(ViewSet):
             project = Projects.objects.get(id=project_id)
             if not project.accepting_applications:
                 return Response({"error": "Este proyecto no está aceptando aplicaciones"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Verificar si ya existe una solicitud para este proyecto y usuario
+            existing_solicitud = Solicitudes.objects.filter(id_user=user.id, id_project=project_id).first()
+            if existing_solicitud:
+                return Response({"error": "Ya has aplicado a este proyecto."}, status=status.HTTP_400_BAD_REQUEST)
 
             # Obtener el ID del líder del proyecto (responsible)
             lider_id = project.responsible_id  # Suponiendo que el campo 'responsible' es un ForeignKey
@@ -652,13 +657,14 @@ class PublicacionViewSet(ViewSet):
                 'id_user': user.id,
                 'name_lider': name_lider,
                 'created_at': timezone.now().strftime('%Y-%m-%d'),
-                'id_project':project.id,
+                'id_project': project.id,
                 'status': 'Pendiente',
+                'name_project': project.name,
                 'name_user': f"{user.first_name} {user.last_name}",
             }
-            
+
             solicitud_serializer = SolicitudSerializer(data=solicitud_data)
-            
+
             if solicitud_serializer.is_valid():
                 solicitud_serializer.save()
                 
@@ -682,6 +688,10 @@ class PublicacionViewSet(ViewSet):
 
         except Projects.DoesNotExist:
             return Response({"error": "Proyecto no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+        except User.DoesNotExist:
+            return Response({"error": "Líder del proyecto no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @swagger_auto_schema(
         operation_description="Aceptar solicitud de un proyecto",
