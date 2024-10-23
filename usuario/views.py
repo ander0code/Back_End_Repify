@@ -727,8 +727,27 @@ class PublicacionViewSet(ViewSet):
         except Solicitudes.DoesNotExist:
             return Response({"error": "Solicitud no encontrada"}, status=status.HTTP_404_NOT_FOUND)  
     
-    @action(detail=False, methods=['POST'], url_path='project_solicitudes',permission_classes=[IsAuthenticated])
-    def get_project_solicitudes(self, request):
+    @action(detail=False, methods=['GET'], url_path='solicitudes_user', permission_classes=[IsAuthenticated])
+    def get_solicitudes_user(self, request):
+        user = request.user.id  
+        
+        try:
+            # Filtrar todas las solicitudes hechas por el usuario autenticado
+            solicitudes = Solicitudes.objects.filter(id_user=user).order_by("-id_solicitud")
+
+            # Verificar si el usuario tiene solicitudes
+            if not solicitudes.exists():
+                return Response({"message": "No solicitudes found for this user"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Serializar las solicitudes
+            serializer = SolicitudSerializer(solicitudes, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    @action(detail=False, methods=['POST'], url_path='solicitudes_project',permission_classes=[IsAuthenticated])
+    def get_solicitudes_project(self, request):
         project_id = request.data.get('project_id')
 
         if not project_id:
@@ -739,7 +758,7 @@ class PublicacionViewSet(ViewSet):
             project = Projects.objects.get(id=project_id)
             
             # Filtrar solicitudes por proyecto
-            solicitudes = Solicitudes.objects.filter(id_project=project)
+            solicitudes = Solicitudes.objects.filter(id_project=project).order_by("-id_solicitud")
             
             # Serializar las solicitudes
             serializer = SolicitudSerializer(solicitudes, many=True)
@@ -747,6 +766,32 @@ class PublicacionViewSet(ViewSet):
 
         except Projects.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+    @action(detail=False, methods=['DELETE'], url_path='delete_solicitud', permission_classes=[IsAuthenticated])
+    def delete_solicitud(self, request):
+        solicitud_id = request.data.get('solicitud_id')
+        user = request.user.id  
+
+        if not solicitud_id:
+            return Response({"error": "solicitud_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Verificar si la solicitud existe y pertenece al usuario autenticado
+            solicitud = Solicitudes.objects.get(id_solicitud=solicitud_id, id_user=user)
+
+            # Verificar si la solicitud ha sido rechazada o no
+            if solicitud.status == 'Rechazado' or solicitud.status == 'Pendiente':
+                # Si la solicitud está pendiente o ha sido rechazada, se permite eliminarla
+                solicitud.delete()
+                return Response({"message": "Solicitud deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({"error": "Cannot delete a solicitud that has been accepted or is in another status"}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Solicitudes.DoesNotExist:
+            return Response({"error": "Solicitud not found or does not belong to the user"}, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     #--------------------------------------------
 

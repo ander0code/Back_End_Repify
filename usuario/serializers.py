@@ -49,6 +49,9 @@ class LoginSerializer(Serializer):
         }
 
 class CustomUserSerializer(adrf.serializers.ModelSerializer):
+    
+    created_at = serializers.DateTimeField(format="%Y-%m-%d")
+    
     class Meta:
         model = Users
         fields = [
@@ -210,7 +213,7 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
 
 class SolicitudSerializer(adrf.serializers.ModelSerializer):
     
-    created_at = serializers.DateField(format="%Y-%m-%d")
+    created_at = serializers.DateTimeField(format="%Y-%m-%d")
     
     class Meta:
         model = Solicitudes
@@ -265,6 +268,7 @@ class ProjectSerializer(adrf.serializers.ModelSerializer):
             f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
             for collab in collaborators if collab.user and collab.user.authuser
         ]
+        
 class ProjectUpdateSerializer(adrf.serializers.ModelSerializer):
     objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
