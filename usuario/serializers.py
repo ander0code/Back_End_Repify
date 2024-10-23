@@ -269,6 +269,7 @@ class ProjectSerializer(adrf.serializers.ModelSerializer):
             for collab in collaborators if collab.user and collab.user.authuser
         ]
         
+        
 class ProjectUpdateSerializer(adrf.serializers.ModelSerializer):
     objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
