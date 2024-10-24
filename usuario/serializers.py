@@ -125,7 +125,8 @@ class ProjectSerializerAll(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField()  # Nombre completo del creador
     collaboration_count = serializers.SerializerMethodField()  # Cantidad de colaboradores
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
-
+    has_applied = serializers.SerializerMethodField()
+    
     class Meta:
         model = Projects
         fields = [
@@ -144,7 +145,8 @@ class ProjectSerializerAll(adrf.serializers.ModelSerializer):
             'accepting_applications',
             'type_aplyuni',
             'creator_name',  # Nombre completo del creador
-            'collaboration_count'  # Cantidad de colaboradores
+            'collaboration_count',  # Cantidad de colaboradores
+            'has_applied'
         ]
         extra_kwargs = {
             'id': {'read_only': True},
@@ -159,6 +161,11 @@ class ProjectSerializerAll(adrf.serializers.ModelSerializer):
     def get_collaboration_count(self, obj):
         # Contar la cantidad de colaboradores relacionados con el proyecto
         return Collaborations.objects.filter(project=obj).count()
+    
+    def get_has_applied(self, obj):
+        # Verifica si el usuario autenticado ha postulado al proyecto
+        user = self.context['request'].user.id 
+        return Solicitudes.objects.filter(id_user=user, id_project=obj).exists()
 
 class ProjectSerializerID(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField()  # Nombre completo del creador
@@ -268,7 +275,6 @@ class ProjectSerializer(adrf.serializers.ModelSerializer):
             f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
             for collab in collaborators if collab.user and collab.user.authuser
         ]
-        
         
 class ProjectUpdateSerializer(adrf.serializers.ModelSerializer):
     objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
