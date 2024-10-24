@@ -549,7 +549,7 @@ class PublicacionViewSet(ViewSet):
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
 
         # Serializa los datos del proyecto
-        serializer = ProjectSerializerID(project)
+        serializer = ProjectSerializerID(project, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     @swagger_auto_schema(
@@ -569,7 +569,7 @@ class PublicacionViewSet(ViewSet):
         projects = Projects.objects.all().order_by('start_date')
         
         # Serializar los proyectos
-        serializer = ProjectSerializerAll(projects, many=True, context={'request': request})
+        serializer = ProjectSerializerAll(projects, many=True)
         
         return Response(serializer.data, status=status.HTTP_200_OK)
         
