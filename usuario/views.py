@@ -5,7 +5,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,ProjectUpdateSerializer,CollaboratorSerializer,ProjectSerializer, NotificationSerializer,ProfileSerializer
+from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,ProjectUpdateSerializer,CollaboratorSerializer,ProjectSerializer, NotificationSerializer,ProfileSerializer, NotificationSerializerMS
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
@@ -665,11 +665,11 @@ class PublicacionViewSet(ViewSet):
                 user_proyect = Projects.objects.get(id=project_id)
                 # Crear la notificación para el propietario del proyecto
                 notification_data = {
-                    'sender': lider_id,  
+                    'sender': user.id,  
                     'message': f"{user.first_name} {user.last_name} aplico al proyecto",
                     'is_read': 0,
                     'created_at': timezone.now(),
-                    'user_id': user.id
+                    'user_id': lider_id
                 }
                 notification_serializer = NotificationSerializer(data=notification_data)
                 
@@ -804,6 +804,31 @@ class PublicacionViewSet(ViewSet):
         
         except Solicitudes.DoesNotExist:
             return Response({"error": "Solicitud no encontrada"}, status=status.HTTP_404_NOT_FOUND)  
+    
+    @swagger_auto_schema(
+        operation_description="Obtener todas las notificaciones del usuario logueado",
+        responses={
+            status.HTTP_200_OK: openapi.Response('Lista de notificaciones obtenida exitosamente'),
+            status.HTTP_401_UNAUTHORIZED: openapi.Response('Usuario no autorizado'),
+        },
+        tags=["Notificacions Project Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='GetNotifications', permission_classes=[IsAuthenticated])
+    def GetNotifications(self, request):
+        user = request.user
+        
+        try:
+            # Obtener todas las notificaciones del usuario logueado
+            notifications = Notifications.objects.filter(user_id=user.id).order_by('-id')
+
+            # Serializar solo los mensajes de las notificaciones
+            serializer = NotificationSerializerMS(notifications, many=True)
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Notifications.DoesNotExist:
+            return Response({"error": "No se encontraron notificaciones"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @action(detail=False, methods=['GET'], url_path='solicitudes_user', permission_classes=[IsAuthenticated])
     def get_solicitudes_user(self, request):
