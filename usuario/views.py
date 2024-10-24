@@ -666,7 +666,7 @@ class PublicacionViewSet(ViewSet):
                 # Crear la notificación para el propietario del proyecto
                 notification_data = {
                     'sender': user.id,  
-                    'message': f"{user.first_name} {user.last_name} aplico al proyecto",
+                    'message': f"{user.first_name} {user.last_name} aplico al proyecto '{project.name}' ",
                     'is_read': 0,
                     'created_at': timezone.now(),
                     'user_id': lider_id
