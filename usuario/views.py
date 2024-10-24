@@ -569,7 +569,7 @@ class PublicacionViewSet(ViewSet):
         projects = Projects.objects.all().order_by('start_date')
         
         # Serializar los proyectos
-        serializer = ProjectSerializerAll(projects, many=True)
+        serializer = ProjectSerializerAll(projects, many=True, context={'request': request})
         
         return Response(serializer.data, status=status.HTTP_200_OK)
         
@@ -836,7 +836,7 @@ class PublicacionViewSet(ViewSet):
         tags=["Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='get-project-id', permission_classes=[IsAuthenticated])
-    def view_project_by_body(self, request):
+    def view_project_id(self, request):
         # Extraer el ID del proyecto del cuerpo de la solicitud
         project_id = request.data.get('id_project')
         if not project_id:
@@ -884,7 +884,7 @@ class PublicacionViewSet(ViewSet):
         tags=["Project Management"]
     )
     @action(detail=False, methods=['PUT'], url_path='update-project', permission_classes=[IsAuthenticated])
-    def update_project_by_body(self, request):
+    def update_project(self, request):
         # Extraer el ID del proyecto del cuerpo de la solicitud
         project_id = request.data.get('project_id')
         if not project_id:
@@ -904,7 +904,6 @@ class PublicacionViewSet(ViewSet):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    
     @swagger_auto_schema(
         operation_description="Obtener proyectos en los que el usuario está colaborando",
         responses={
