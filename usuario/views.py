@@ -665,11 +665,11 @@ class PublicacionViewSet(ViewSet):
                 user_proyect = Projects.objects.get(id=project_id)
                 # Crear la notificación para el propietario del proyecto
                 notification_data = {
-                    'sender': lider_id,  
+                    'sender': user.id,  
                     'message': f"{user.first_name} {user.last_name} aplico al proyecto",
                     'is_read': 0,
                     'created_at': timezone.now(),
-                    'user_id': user.id
+                    'user_id': lider_id
                 }
                 notification_serializer = NotificationSerializer(data=notification_data)
                 
@@ -804,6 +804,29 @@ class PublicacionViewSet(ViewSet):
         
         except Solicitudes.DoesNotExist:
             return Response({"error": "Solicitud no encontrada"}, status=status.HTTP_404_NOT_FOUND)  
+    
+    @swagger_auto_schema(
+        operation_description="Obtener todas las notificaciones del usuario logueado",
+        responses={
+            status.HTTP_200_OK: openapi.Response('Lista de notificaciones obtenida exitosamente'),
+            status.HTTP_401_UNAUTHORIZED: openapi.Response('Usuario no autorizado'),
+        },
+        tags=["Notificacions Project Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='GetNotifications', permission_classes=[IsAuthenticated])
+    def GetNotifications(self, request):
+        user = request.user
+        
+        try:
+            # Obtener todas las notificaciones del usuario logueado
+            notifications = Notifications.objects.filter(user_id=user.id)
+            
+            messages = [notification.message for notification in notifications]
+
+            return Response(messages, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @action(detail=False, methods=['GET'], url_path='solicitudes_user', permission_classes=[IsAuthenticated])
     def get_solicitudes_user(self, request):
