@@ -24,11 +24,11 @@ class Collaborations(models.Model):
 
 class Notifications(models.Model):
     id = models.BigAutoField(primary_key=True)
-    user_id  = models.IntegerField(blank=True, null=True)
-    sender_id = models.ForeignKey('Users', models.DO_NOTHING, blank=True, null=True)
+    sender= models.ForeignKey('Users', models.DO_NOTHING, blank=True, null=True)
     message = models.TextField(blank=True, null=True)
     is_read = models.IntegerField(blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
+    user_id = models.IntegerField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -101,6 +101,7 @@ class Users(models.Model):
     cycle = models.TextField(blank=True, null=True)
     biography = models.TextField(blank=True, null=True)
     photo = models.TextField(blank=True, null=True)
+    interests = ArrayField(models.CharField(max_length=500), blank=True, null=True)
     achievements = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
     authuser = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True)

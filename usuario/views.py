@@ -5,12 +5,12 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,CollaboratorSerializer,ProjectSerializer,ProjectUpdateSerializer, ProfileSerializer
+from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,ProjectUpdateSerializer,CollaboratorSerializer,ProjectSerializer, NotificationSerializer,ProfileSerializer, NotificationSerializerMS
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
-from usuario.models import Users,Projects,Solicitudes,Collaborations
+from usuario.models import Users,Projects,Solicitudes,Collaborations, Notifications
 from rest_framework.permissions import AllowAny ,IsAuthenticated
 import random
 
@@ -289,8 +289,9 @@ class LoginViewSet(ViewSet):
         },
         tags=["User Management"]
     )
-    @action(detail=False, methods=['PUT'], url_path='update-profile')
+    @action(detail=False, methods=['PUT'], url_path='update-profile',permission_classes=[IsAuthenticated])
     async def update_user_profile(self, request):
+
         user_id = request.data.get('id')
         try:
             # Obtener el perfil de usuario usando el ID (pk)
@@ -301,7 +302,7 @@ class LoginViewSet(ViewSet):
         # Crea un serializador con los datos actuales del perfil y los nuevos datos enviados
         serializer = CustomUserSerializer(user_profile, data=request.data, partial=True)
 
-        if serializer.is_valid():
+        if await sync_to_async(serializer.is_valid)():
             await sync_to_async(serializer.save)()  # Guarda las actualizaciones
             return Response(serializer.data, status=status.HTTP_200_OK)
         
@@ -322,8 +323,9 @@ class LoginViewSet(ViewSet):
         },
         tags=["User Management"]
     )
-    @action(detail=False, methods=['DELETE'], url_path='delete-user')
+    @action(detail=False, methods=['DELETE'], url_path='delete-user', permission_classes=[IsAuthenticated])
     async def delete_user(self, request):
+
         user_id = request.data.get('id')
         try:
             # Buscar al usuario en la tabla Users por su ID (pk)
@@ -583,11 +585,37 @@ class PublicacionViewSet(ViewSet):
             required=['project_id'],
             properties={
                 'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto'),
+                
             }
         ),
         responses={
-            status.HTTP_201_CREATED: openapi.Response('Solicitud creada exitosamente'),
+            status.HTTP_201_CREATED: openapi.Response(
+                'Solicitud y notificación creadas exitosamente',
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'solicitud': openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'id_user': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario que aplicó'),
+                                'id_project': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto'),
+                                'status': openapi.Schema(type=openapi.TYPE_STRING, description='Estado de la solicitud'),
+                            }
+                        ),
+                        'notificación': openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'user': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario que recibe la notificación'),
+                                'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de la notificación'),
+                                'is_read': openapi.Schema(type=openapi.TYPE_INTEGER, description='Estado de lectura de la notificación (0 o 1)'),
+                                'created_at': openapi.Schema(type=openapi.TYPE_STRING, format='date-time', description='Fecha de creación de la notificación'),
+                            }
+                        )
+                    }
+                )
+            ),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Error en los datos proporcionados'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Proyecto no encontrado'),
         },
         tags=["Notificacions Project Management"]
     )
@@ -595,6 +623,7 @@ class PublicacionViewSet(ViewSet):
     def ApplyProject(self, request):
         project_id = request.data.get('project_id')
         user = request.user
+        
 
         try:
             # Verificar si el proyecto acepta aplicaciones
@@ -631,6 +660,24 @@ class PublicacionViewSet(ViewSet):
 
             if solicitud_serializer.is_valid():
                 solicitud_serializer.save()
+                print(user.id)
+                
+                user_proyect = Projects.objects.get(id=project_id)
+                # Crear la notificación para el propietario del proyecto
+                notification_data = {
+                    'sender': user.id,  
+                    'message': f"{user.first_name} {user.last_name} aplico al proyecto '{project.name}' ",
+                    'is_read': 0,
+                    'created_at': timezone.now(),
+                    'user_id': lider_id
+                }
+                notification_serializer = NotificationSerializer(data=notification_data)
+                
+                if notification_serializer.is_valid():
+                    notification_serializer.save()
+                else:
+                    return Response(notification_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
                 return Response(solicitud_serializer.data, status=status.HTTP_201_CREATED)
             else:
                 return Response(solicitud_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -684,6 +731,21 @@ class PublicacionViewSet(ViewSet):
             
             if collaboration_serializer.is_valid():
                 collaboration_serializer.save()
+                # Crear la notificación para el usuario que aplicó al proyecto
+                notification_data = {
+                    'sender': user.id,  # El usuario que acepta la solicitud
+                    'message': f"Tu solicitud al proyecto '{solicitud.id_project.name}' ha sido aceptada.",
+                    'is_read': 0,
+                    'created_at': timezone.now(),
+                    'user_id': solicitud.id_user.id  # Usuario que aplicó al proyecto
+                }
+                notification_serializer = NotificationSerializer(data=notification_data)
+                
+                if notification_serializer.is_valid():
+                    notification_serializer.save()
+                else:
+                    return Response(notification_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                
                 return Response({"mensaje": "Solicitud aceptada y colaboración creada exitosamente"}, status=status.HTTP_200_OK)
             else:
                 return Response(collaboration_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -713,20 +775,60 @@ class PublicacionViewSet(ViewSet):
         user = request.user
 
         try:
-            solicitud = Solicitudes.objects.get(id=solicitud_id)
+            solicitud = Solicitudes.objects.get(id_solicitud=solicitud_id)
             
             # Verificar si el usuario es el responsable del proyecto
-            if solicitud.id_project.responsible != user.id:
+            if solicitud.id_project.responsible.id != user.id:
                 return Response({"error": "No tienes permiso para negar esta solicitud"}, status=status.HTTP_403_FORBIDDEN)
 
             # Cambiar el estado de la solicitud a 'Negada'
             solicitud.status = 'Rechazado'
             solicitud.save()
-
+            
+             # Crear la notificación para el usuario que aplicó al proyecto
+            notification_data = {
+                'sender': user.id,  # Usuario responsable del proyecto que rechaza la solicitud
+                'message': f"Tu solicitud al proyecto '{solicitud.id_project.name}' ha sido rechazada.",
+                'is_read': 0,
+                'created_at': timezone.now(),
+                'user_id': solicitud.id_user.id  # Usuario que aplicó al proyecto
+            }
+            notification_serializer = NotificationSerializer(data=notification_data)
+            
+            if notification_serializer.is_valid():
+                notification_serializer.save()
+            else:
+                return Response(notification_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
             return Response({"mensaje": "Solicitud negada exitosamente"}, status=status.HTTP_200_OK)
         
         except Solicitudes.DoesNotExist:
             return Response({"error": "Solicitud no encontrada"}, status=status.HTTP_404_NOT_FOUND)  
+    
+    @swagger_auto_schema(
+        operation_description="Obtener todas las notificaciones del usuario logueado",
+        responses={
+            status.HTTP_200_OK: openapi.Response('Lista de notificaciones obtenida exitosamente'),
+            status.HTTP_401_UNAUTHORIZED: openapi.Response('Usuario no autorizado'),
+        },
+        tags=["Notificacions Project Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='GetNotifications', permission_classes=[IsAuthenticated])
+    def GetNotifications(self, request):
+        user = request.user
+        
+        try:
+            # Obtener todas las notificaciones del usuario logueado
+            notifications = Notifications.objects.filter(user_id=user.id).order_by('-id')
+
+            # Serializar solo los mensajes de las notificaciones
+            serializer = NotificationSerializerMS(notifications, many=True)
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Notifications.DoesNotExist:
+            return Response({"error": "No se encontraron notificaciones"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @action(detail=False, methods=['GET'], url_path='solicitudes_user', permission_classes=[IsAuthenticated])
     def get_solicitudes_user(self, request):

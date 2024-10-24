@@ -4,7 +4,9 @@ import adrf
 from adrf.serializers import Serializer
 
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Users, Projects , Collaborations, Solicitudes  
+from .models import Users, Projects , Collaborations, Solicitudes, Notifications  # Asegúrate de tener bien definido tu modelo de Usuarios
+
+from .models import Users, Projects , Collaborations, Solicitudes  # Asegúrate de tener bien definido tu modelo de Usuarios
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -49,6 +51,7 @@ class LoginSerializer(Serializer):
 
 class CustomUserSerializer(adrf.serializers.ModelSerializer):
     
+    interests = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     created_at = serializers.DateTimeField(format="%Y-%m-%d")
     
     class Meta:
@@ -59,6 +62,7 @@ class CustomUserSerializer(adrf.serializers.ModelSerializer):
             'career',
             'cycle',
             'biography',
+            'interests',
             'photo',
             'achievements',
             'created_at'
@@ -164,7 +168,6 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField() 
     collaboration_count = serializers.SerializerMethodField()  
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
-    objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     has_applied = serializers.SerializerMethodField()
     
@@ -182,7 +185,7 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
             'responsible',
             'name_uniuser',
             'detailed_description',
-            'objectives',
+            'necessary_requirements',
             'progress',
             'necessary_requirements',
             'accepting_applications',
@@ -235,7 +238,17 @@ class CollaboratorSerializer(adrf.serializers.ModelSerializer):
     class Meta:
         model = Collaborations
         fields = "__all__"
-
+        
+class NotificationSerializer(adrf.serializers.ModelSerializer):
+    class Meta:
+        model = Notifications
+        fields = "__all__"
+        
+class NotificationSerializerMS(adrf.serializers.ModelSerializer):
+    class Meta:
+        model = Notifications
+        fields = ['id','message'] 
+        
 class ProjectSerializer(adrf.serializers.ModelSerializer):
     objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
@@ -310,8 +323,9 @@ class ProfileSerializer(adrf.serializers.ModelSerializer):
     first_name = serializers.CharField(source='authuser.first_name', read_only=True)
     last_name = serializers.CharField(source='authuser.last_name', read_only=True)
     date_joined = serializers.DateTimeField(source='authuser.date_joined', read_only=True)
-
+    interests = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
+    
     class Meta:
         model = Users
-        fields = ['university', 'career', 'cycle', 'biography', 'photo', 'achievements', 'created_at', 
+        fields = ['university', 'career', 'cycle', 'biography','interests', 'photo', 'achievements', 'created_at', 
                   'email', 'first_name', 'last_name', 'date_joined']
