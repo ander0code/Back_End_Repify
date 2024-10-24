@@ -738,6 +738,21 @@ class PublicacionViewSet(ViewSet):
             
             if collaboration_serializer.is_valid():
                 collaboration_serializer.save()
+                # Crear la notificación para el usuario que aplicó al proyecto
+                notification_data = {
+                    'sender': user.id,  # El usuario que acepta la solicitud
+                    'message': f"Tu solicitud al proyecto '{solicitud.id_project.name}' ha sido aceptada.",
+                    'is_read': 0,
+                    'created_at': timezone.now(),
+                    'user_id': solicitud.id_user.id  # Usuario que aplicó al proyecto
+                }
+                notification_serializer = NotificationSerializer(data=notification_data)
+                
+                if notification_serializer.is_valid():
+                    notification_serializer.save()
+                else:
+                    return Response(notification_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                
                 return Response({"mensaje": "Solicitud aceptada y colaboración creada exitosamente"}, status=status.HTTP_200_OK)
             else:
                 return Response(collaboration_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -767,16 +782,31 @@ class PublicacionViewSet(ViewSet):
         user = request.user
 
         try:
-            solicitud = Solicitudes.objects.get(id=solicitud_id)
+            solicitud = Solicitudes.objects.get(id_solicitud=solicitud_id)
             
             # Verificar si el usuario es el responsable del proyecto
-            if solicitud.id_project.responsible != user.id:
+            if solicitud.id_project.responsible.id != user.id:
                 return Response({"error": "No tienes permiso para negar esta solicitud"}, status=status.HTTP_403_FORBIDDEN)
 
             # Cambiar el estado de la solicitud a 'Negada'
             solicitud.status = 'Negada'
             solicitud.save()
-
+            
+             # Crear la notificación para el usuario que aplicó al proyecto
+            notification_data = {
+                'sender': user.id,  # Usuario responsable del proyecto que rechaza la solicitud
+                'message': f"Tu solicitud al proyecto '{solicitud.id_project.name}' ha sido rechazada.",
+                'is_read': 0,
+                'created_at': timezone.now(),
+                'user_id': solicitud.id_user.id  # Usuario que aplicó al proyecto
+            }
+            notification_serializer = NotificationSerializer(data=notification_data)
+            
+            if notification_serializer.is_valid():
+                notification_serializer.save()
+            else:
+                return Response(notification_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
             return Response({"mensaje": "Solicitud negada exitosamente"}, status=status.HTTP_200_OK)
         
         except Solicitudes.DoesNotExist:
