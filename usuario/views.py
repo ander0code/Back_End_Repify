@@ -426,70 +426,56 @@ class PublicacionViewSet(ViewSet):
         return Response(project_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @swagger_auto_schema(
-        operation_description="Update an existing project by ID",
+        operation_description="Actualizar un proyecto específico pasando el ID y los datos del proyecto en el cuerpo de la solicitud",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
-            required=['id'],
             properties={
-                'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the project to view'),
-                'name': openapi.Schema(type=openapi.TYPE_STRING, description='Name of the project'),
-                'description': openapi.Schema(type=openapi.TYPE_STRING, description='Description of the project'),
-                'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='End date of the project'),
-                'status': openapi.Schema(type=openapi.TYPE_STRING, description='Current status of the project'),
-                'project_type': openapi.Schema(type=openapi.TYPE_STRING, description='Type of the project'),
-                'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Priority of the project'),
-                'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Detailed description of the project'),
-                'expected_benefits': openapi.Schema(type=openapi.TYPE_STRING, description='Expected benefits of the project'),
-                'necessary_requirements': openapi.Schema(type=openapi.TYPE_STRING, description='Necessary requirements for the project'),
-                'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progress percentage of the project'),
-                'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='ACCEPT REQUESTS'),
+                'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto'),
+                'name': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del proyecto'),
+                'description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción del proyecto'),
+                'start_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de inicio'),
+                'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de finalización'),
+                'status': openapi.Schema(type=openapi.TYPE_STRING, description='Estado del proyecto'),
+                'project_type': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de proyecto'),
+                'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Prioridad del proyecto'),
+                'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del responsable'),
+                'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción detallada'),
+                'objectives': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description='Objetivos'),
+                'necessary_requirements': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description='Requisitos necesarios'),
+                'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progreso del proyecto'),
+                'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Si está aceptando aplicaciones'),
+                'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de aplicación')
             },
+            required=['project_id']  # El ID del proyecto es obligatorio
         ),
         responses={
-            status.HTTP_200_OK: openapi.Response(
-                'Project updated successfully',
-                openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        'name': openapi.Schema(type=openapi.TYPE_STRING, description='Name of the project'),
-                        'description': openapi.Schema(type=openapi.TYPE_STRING, description='Description of the project'),
-                        'start_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='Start date of the project'),
-                        'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='End date of the project'),
-                        'status': openapi.Schema(type=openapi.TYPE_STRING, description='Current status of the project'),
-                        'project_type': openapi.Schema(type=openapi.TYPE_STRING, description='Type of the project'),
-                        'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the responsible user'),
-                        'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Detailed description of the project'),
-                        'expected_benefits': openapi.Schema(type=openapi.TYPE_STRING, description='Expected benefits of the project'),
-                        'necessary_requirements': openapi.Schema(type=openapi.TYPE_STRING, description='Necessary requirements for the project'),
-                        'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progress percentage of the project'),
-                        'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='ACCEPT REQUESTS'),
-                    }
-                )
-            ),
-            status.HTTP_404_NOT_FOUND: openapi.Response('Project not found'),
-            status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid input data'),
+            status.HTTP_200_OK: openapi.Response('Proyecto actualizado correctamente'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Proyecto no encontrado'),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Datos inválidos'),
         },
-        tags=["CRUD Project Management"]
+        tags=["Project Management"]
     )
-    @action(detail=False, methods=['PUT'], url_path='update_project', permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['PUT'], url_path='update-project', permission_classes=[IsAuthenticated])
     def update_project(self, request):
-        
-        try:
-            # Obtener el proyecto usando el ID (pk)
-            project_id = request.data.get('id')
-            project = Projects.objects.get(pk=project_id)
-        except project.DoesNotExist:
-            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+        # Extraer el ID del proyecto del cuerpo de la solicitud
+        project_id = request.data.get('project_id')
+        if not project_id:
+            return Response({"message": "ID del proyecto es requerido."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Crea un serializador con los datos actuales del proyecto y los nuevos datos enviados
-        serializer = ProjectSerializerCreate(instance=project, data=request.data, partial=True)
+        # Obtener la instancia del usuario autenticado
+        user_instance = request.user.id
 
+        # Buscar el proyecto por su ID y verificar que el responsable es el usuario autenticado
+        project = get_object_or_404(Projects, id=project_id, responsible=user_instance)
+
+        # Serializar los datos de actualización
+        serializer = ProjectUpdateSerializer(project, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save()  # Guarda las actualizaciones
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     @swagger_auto_schema(
         operation_description="Delete a project by ID",
         request_body=openapi.Schema(
@@ -853,57 +839,6 @@ class PublicacionViewSet(ViewSet):
         
         return Response(serializer.data, status=status.HTTP_200_OK)    
     
-    @swagger_auto_schema(
-        operation_description="Actualizar un proyecto específico pasando el ID y los datos del proyecto en el cuerpo de la solicitud",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto'),
-                'name': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del proyecto'),
-                'description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción del proyecto'),
-                'start_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de inicio'),
-                'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de finalización'),
-                'status': openapi.Schema(type=openapi.TYPE_STRING, description='Estado del proyecto'),
-                'project_type': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de proyecto'),
-                'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Prioridad del proyecto'),
-                'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del responsable'),
-                'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción detallada'),
-                'objectives': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description='Objetivos'),
-                'necessary_requirements': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description='Requisitos necesarios'),
-                'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progreso del proyecto'),
-                'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Si está aceptando aplicaciones'),
-                'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de aplicación')
-            },
-            required=['project_id']  # El ID del proyecto es obligatorio
-        ),
-        responses={
-            status.HTTP_200_OK: openapi.Response('Proyecto actualizado correctamente'),
-            status.HTTP_404_NOT_FOUND: openapi.Response('Proyecto no encontrado'),
-            status.HTTP_400_BAD_REQUEST: openapi.Response('Datos inválidos'),
-        },
-        tags=["Project Management"]
-    )
-    @action(detail=False, methods=['PUT'], url_path='update-project', permission_classes=[IsAuthenticated])
-    def update_project(self, request):
-        # Extraer el ID del proyecto del cuerpo de la solicitud
-        project_id = request.data.get('project_id')
-        if not project_id:
-            return Response({"message": "ID del proyecto es requerido."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Obtener la instancia del usuario autenticado
-        user_instance = request.user.id
-
-        # Buscar el proyecto por su ID y verificar que el responsable es el usuario autenticado
-        project = get_object_or_404(Projects, id=project_id, responsible=user_instance)
-
-        # Serializar los datos de actualización
-        serializer = ProjectUpdateSerializer(project, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
     @swagger_auto_schema(
         operation_description="Obtener proyectos en los que el usuario está colaborando",
         responses={
