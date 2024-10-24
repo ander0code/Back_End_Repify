@@ -836,7 +836,7 @@ class PublicacionViewSet(ViewSet):
         tags=["Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='get-project-id', permission_classes=[IsAuthenticated])
-    def view_project_id(self, request):
+    def get_project_id(self, request):
         # Extraer el ID del proyecto del cuerpo de la solicitud
         project_id = request.data.get('id_project')
         if not project_id:
