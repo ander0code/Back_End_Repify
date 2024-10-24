@@ -124,7 +124,7 @@ class ProjectSerializerAll(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField() 
     collaboration_count = serializers.SerializerMethodField() 
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
-    has_applied = serializers.SerializerMethodField()
+    
     
     class Meta:
         model = Projects
@@ -144,8 +144,7 @@ class ProjectSerializerAll(adrf.serializers.ModelSerializer):
             'accepting_applications',
             'type_aplyuni',
             'creator_name',  
-            'collaboration_count',  
-            'has_applied'
+            'collaboration_count'
         ]
         extra_kwargs = {
             'id': {'read_only': True},
@@ -161,10 +160,6 @@ class ProjectSerializerAll(adrf.serializers.ModelSerializer):
         
         return Collaborations.objects.filter(project=obj).count()
     
-    def get_has_applied(self, obj):
-       
-        user = self.context['request'].user.id 
-        return Solicitudes.objects.filter(id_user=user, id_project=obj).exists()
 
 class ProjectSerializerID(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField() 
@@ -172,7 +167,8 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
-        
+    has_applied = serializers.SerializerMethodField()
+    
     class Meta:
         model = Projects
         fields = [
@@ -194,6 +190,7 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
             'type_aplyuni',
             'creator_name', 
             'collaboration_count',  
+            'has_applied'
         ]
         extra_kwargs = {
             'id': {'read_only': True},
@@ -216,6 +213,10 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
             f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
             for collab in collaborators if collab.user and collab.user.authuser
         ]
+    def get_has_applied(self, obj):
+       
+        user = self.context['request'].user.id 
+        return Solicitudes.objects.filter(id_user=user, id_project=obj).exists()
 
 class SolicitudSerializer(adrf.serializers.ModelSerializer):
     
