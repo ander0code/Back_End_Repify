@@ -214,8 +214,14 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
             for collab in collaborators if collab.user and collab.user.authuser
         ]
     def get_has_applied(self, obj):
-       
+        # Obtener el usuario autenticado desde el contexto
         user = self.context['request'].user.id 
+
+        # Verificar si el usuario es el responsable del proyecto
+        if obj.responsible and obj.responsible.authuser and obj.responsible.authuser.id == user:
+            return True
+
+        # Si no es el responsable, verificar si el usuario ha aplicado al proyecto
         return Solicitudes.objects.filter(id_user=user, id_project=obj).exists()
 
 class SolicitudSerializer(adrf.serializers.ModelSerializer):
