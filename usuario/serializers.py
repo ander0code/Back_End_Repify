@@ -237,7 +237,7 @@ class CollaboratorSerializer(adrf.serializers.ModelSerializer):
         model = Collaborations
         fields = "__all__"
         
-class NotificationSerializer(serializers.ModelSerializer):
+class NotificationSerializer(adrf.serializers.ModelSerializer):
     class Meta:
         model = Notifications
         fields = "__all__"

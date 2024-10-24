@@ -5,8 +5,8 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,CollaboratorSerializer,ProjectSerializer, NotificationSerializer
-from rest_framework.decorators import action,permission_classes
+from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,ProjectUpdateSerializer,CollaboratorSerializer,ProjectSerializer, NotificationSerializer,ProfileSerializer
+from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
@@ -289,10 +289,9 @@ class LoginViewSet(ViewSet):
         },
         tags=["User Management"]
     )
-    @action(detail=False, methods=['PUT'], url_path='update-profile')
+    @action(detail=False, methods=['PUT'], url_path='update-profile',permission_classes=[IsAuthenticated])
     async def update_user_profile(self, request):
-    @action(detail=False, methods=['PUT'], url_path='update-profile', permission_classes=[IsAuthenticated])
-    def update_user_profile(self, request):
+
         user_id = request.data.get('id')
         try:
             # Obtener el perfil de usuario usando el ID (pk)
@@ -324,10 +323,9 @@ class LoginViewSet(ViewSet):
         },
         tags=["User Management"]
     )
-    @action(detail=False, methods=['DELETE'], url_path='delete-user')
-    async def delete_user(self, request):
     @action(detail=False, methods=['DELETE'], url_path='delete-user', permission_classes=[IsAuthenticated])
-    def delete_user(self, request):
+    async def delete_user(self, request):
+
         user_id = request.data.get('id')
         try:
             # Buscar al usuario en la tabla Users por su ID (pk)
