@@ -864,31 +864,36 @@ class PublicacionViewSet(ViewSet):
         else:
             return Response({"message": "No se encontraron proyectos en los que colabora."}, status=status.HTTP_404_NOT_FOUND)
 
-    @action(detail=False, methods=['DELETE'], url_path='delete_collaborators', permission_classes=[IsAuthenticated])
-    def delete_accepted_collaborators(self, request):
-        
+    @action(detail=False, methods=['DELETE'], url_path='delete_collaborator', permission_classes=[IsAuthenticated])
+    def delete_collaborator(self, request):
         project_id = request.data.get('project_id')
+        user_id = request.data.get('user_id')
 
-        if not project_id:
-            return Response({"error": "project_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not project_id or not user_id:
+            return Response({"error": "Both project_id and user_id are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             # Verificar que el proyecto existe
             project = Projects.objects.get(id=project_id)
 
-            # Filtrar las colaboraciones aceptadas para el proyecto
-            accepted_collaborations = Collaborations.objects.filter(project=project, status='accepted')
+            # Verificar que el usuario existe
+            user = Users.objects.get(id=user_id)
 
-            if not accepted_collaborations.exists():
-                return Response({"message": "No accepted collaborators found"}, status=status.HTTP_404_NOT_FOUND)
+            # Verificar que la colaboración existe
+            collaboration = Collaborations.objects.filter(project=project, user=user).first()
 
-            # Eliminar las colaboraciones aceptadas
-            accepted_collaborations.delete()
+            if not collaboration:
+                return Response({"error": "Collaboration not found"}, status=status.HTTP_404_NOT_FOUND)
 
-            return Response({"message": "Accepted collaborators deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+            # Eliminar la colaboración
+            collaboration.delete()
+
+            return Response({"message": "Collaborator deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
         except Projects.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Users.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
