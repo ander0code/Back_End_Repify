@@ -241,7 +241,12 @@ class NotificationSerializer(adrf.serializers.ModelSerializer):
     class Meta:
         model = Notifications
         fields = "__all__"
-
+        
+class NotificationSerializerMS(serializers.ModelSerializer):
+    class Meta:
+        model = Notifications
+        fields = ['message'] 
+        
 class ProjectSerializer(adrf.serializers.ModelSerializer):
     objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)

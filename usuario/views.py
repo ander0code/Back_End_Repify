@@ -5,7 +5,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,ProjectUpdateSerializer,CollaboratorSerializer,ProjectSerializer, NotificationSerializer,ProfileSerializer
+from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,ProjectUpdateSerializer,CollaboratorSerializer,ProjectSerializer, NotificationSerializer,ProfileSerializer, NotificationSerializerMS
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
@@ -819,12 +819,14 @@ class PublicacionViewSet(ViewSet):
         
         try:
             # Obtener todas las notificaciones del usuario logueado
-            notifications = Notifications.objects.filter(user_id=user.id)
-            
-            messages = [notification.message for notification in notifications]
+            notifications = Notifications.objects.filter(user_id=user.id).order_by('-id')
 
-            return Response(messages, status=status.HTTP_200_OK)
-        
+            # Serializar solo los mensajes de las notificaciones
+            serializer = NotificationSerializerMS(notifications, many=True)
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Notifications.DoesNotExist:
+            return Response({"error": "No se encontraron notificaciones"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
