@@ -302,7 +302,7 @@ class LoginViewSet(ViewSet):
         # Crea un serializador con los datos actuales del perfil y los nuevos datos enviados
         serializer = CustomUserSerializer(user_profile, data=request.data, partial=True)
 
-        if serializer.is_valid():
+        if await sync_to_async(serializer.is_valid)():
             await sync_to_async(serializer.save)()  # Guarda las actualizaciones
             return Response(serializer.data, status=status.HTTP_200_OK)
         

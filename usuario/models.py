@@ -101,6 +101,7 @@ class Users(models.Model):
     cycle = models.TextField(blank=True, null=True)
     biography = models.TextField(blank=True, null=True)
     photo = models.TextField(blank=True, null=True)
+    interests = ArrayField(models.CharField(max_length=500), blank=True, null=True)
     achievements = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
     authuser = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True)

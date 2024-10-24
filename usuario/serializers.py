@@ -51,6 +51,7 @@ class LoginSerializer(Serializer):
 
 class CustomUserSerializer(adrf.serializers.ModelSerializer):
     
+    interests = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     created_at = serializers.DateTimeField(format="%Y-%m-%d")
     
     class Meta:
@@ -61,6 +62,7 @@ class CustomUserSerializer(adrf.serializers.ModelSerializer):
             'career',
             'cycle',
             'biography',
+            'interests',
             'photo',
             'achievements',
             'created_at'
@@ -316,8 +318,9 @@ class ProfileSerializer(adrf.serializers.ModelSerializer):
     first_name = serializers.CharField(source='authuser.first_name', read_only=True)
     last_name = serializers.CharField(source='authuser.last_name', read_only=True)
     date_joined = serializers.DateTimeField(source='authuser.date_joined', read_only=True)
-
+    interests = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
+    
     class Meta:
         model = Users
-        fields = ['university', 'career', 'cycle', 'biography', 'photo', 'achievements', 'created_at', 
+        fields = ['university', 'career', 'cycle', 'biography','interests', 'photo', 'achievements', 'created_at', 
                   'email', 'first_name', 'last_name', 'date_joined']
