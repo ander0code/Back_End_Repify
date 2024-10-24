@@ -823,22 +823,25 @@ class PublicacionViewSet(ViewSet):
     )
     @action(detail=False, methods=['POST'], url_path='get-project-id', permission_classes=[IsAuthenticated])
     def get_project_id(self, request):
-        # Extraer el ID del proyecto del cuerpo de la solicitud
         project_id = request.data.get('id_project')
         if not project_id:
             return Response({"message": "ID del proyecto es requerido."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Obtener la instancia del usuario autenticado
         user_instance = request.user.id
 
-        # Buscar el proyecto por su ID y verificar que el responsable es el usuario autenticado
-        project = get_object_or_404(Projects, id=project_id, responsible=user_instance)
+        # Verificar el ID del usuario responsable
+        project = Projects.objects.filter(id=project_id).first()
+        
+        if project is None:
+            return Response({"message": "Proyecto no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Serializar el proyecto encontrado
+        if project.responsible.id != user_instance:
+            return Response({"message": "El usuario no es responsable del proyecto."}, status=status.HTTP_403_FORBIDDEN)
+
         serializer = ProjectSerializer(project)
         
-        return Response(serializer.data, status=status.HTTP_200_OK)    
-    
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        
     @swagger_auto_schema(
         operation_description="Obtener proyectos en los que el usuario está colaborando",
         responses={
