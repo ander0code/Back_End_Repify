@@ -4,7 +4,7 @@ import adrf
 from adrf.serializers import Serializer
 
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Users, Projects , Collaborations, Solicitudes  # Asegúrate de tener bien definido tu modelo de Usuarios
+from .models import Users, Projects , Collaborations, Solicitudes  
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -17,7 +17,6 @@ class LoginSerializer(Serializer):
         email = data.get('email')
         password = data.get('password')
 
-        # Autenticar al usuario usando el email y la contraseña
         user = authenticate(username=email, password=password)
 
         if user is None:
@@ -27,23 +26,23 @@ class LoginSerializer(Serializer):
         refresh = RefreshToken.for_user(user)
         
         try:
-            custom_user = Users.objects.get(authuser=user)  # Buscar el usuario personalizado por el authuser
-            university_name = custom_user.university  # Extraer el nombre de la universidad
+            custom_user = Users.objects.get(authuser=user)  
+            university_name = custom_user.university  
         except Users.DoesNotExist:
-            university_name = None  # Si no existe la relación, se devuelve None
+            university_name = None  
 
         try:
-            custom_user = Users.objects.get(authuser=user)  # Buscar el usuario personalizado por el authuser
-            career_name = custom_user.career  # Extraer el nombre de la universidad
+            custom_user = Users.objects.get(authuser=user) 
+            career_name = custom_user.career  
         except Users.DoesNotExist:
-            career_name = None  # Si no existe la relación, se devuelve None
+            career_name = None  
 
         # Retornar los tokens y los datos del usuario, incluyendo el ID
         return {
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'email': user.email,
-            'id': user.id,  # Aquí se agrega el ID del usuario
+            'id': user.id,  
             'university': university_name,
             'career':career_name
         }
@@ -65,14 +64,14 @@ class CustomUserSerializer(adrf.serializers.ModelSerializer):
             'created_at'
         ]
         extra_kwargs = {
-            'id': {'read_only': True},  # Esto asegura que el ID no se puede establecer manualmente
-            'created_at': {'read_only': True},  # Esto asegura que created_at se establezca automáticamente
+            'id': {'read_only': True}, 
+            'created_at': {'read_only': True}, 
         }
 
 class ProjectSerializerCreate(adrf.serializers.ModelSerializer):
-    creator_name = serializers.SerializerMethodField()  # Nombre completo del creador
-    collaboration_count = serializers.SerializerMethodField()  # Cantidad de colaboradores
-    collaborators = serializers.SerializerMethodField()  # Nombres de los colaboradores
+    creator_name = serializers.SerializerMethodField() 
+    collaboration_count = serializers.SerializerMethodField()  
+    collaborators = serializers.SerializerMethodField()  
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
@@ -95,26 +94,26 @@ class ProjectSerializerCreate(adrf.serializers.ModelSerializer):
             'name_uniuser',
             'accepting_applications',
             'type_aplyuni',
-            'creator_name',  # Nombre completo del creador
-            'collaboration_count',  # Cantidad de colaboradores
-            'collaborators'  # Lista de nombres de los colaboradores
+            'creator_name', 
+            'collaboration_count',  
+            'collaborators'  
         ]
         extra_kwargs = {
             'id': {'read_only': True},
         }
 
     def get_creator_name(self, obj):
-        # Acceder a los campos de first_name y last_name del responsable desde auth_user
+        
         if obj.responsible and obj.responsible.authuser:
             return f"{obj.responsible.authuser.first_name} {obj.responsible.authuser.last_name}"
         return None
 
     def get_collaboration_count(self, obj):
-        # Contar la cantidad de colaboradores relacionados con el proyecto
+
         return Collaborations.objects.filter(project=obj).count()
 
     def get_collaborators(self, obj):
-        # Obtener los nombres completos de los colaboradores asociados al proyecto
+       
         collaborators = Collaborations.objects.filter(project=obj).select_related('user__authuser')
         return [
             f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
@@ -122,8 +121,8 @@ class ProjectSerializerCreate(adrf.serializers.ModelSerializer):
         ]
 
 class ProjectSerializerAll(adrf.serializers.ModelSerializer):
-    creator_name = serializers.SerializerMethodField()  # Nombre completo del creador
-    collaboration_count = serializers.SerializerMethodField()  # Cantidad de colaboradores
+    creator_name = serializers.SerializerMethodField() 
+    collaboration_count = serializers.SerializerMethodField() 
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     has_applied = serializers.SerializerMethodField()
     
@@ -144,8 +143,8 @@ class ProjectSerializerAll(adrf.serializers.ModelSerializer):
             'progress',
             'accepting_applications',
             'type_aplyuni',
-            'creator_name',  # Nombre completo del creador
-            'collaboration_count',  # Cantidad de colaboradores
+            'creator_name',  
+            'collaboration_count',  
             'has_applied'
         ]
         extra_kwargs = {
@@ -153,23 +152,23 @@ class ProjectSerializerAll(adrf.serializers.ModelSerializer):
         }
 
     def get_creator_name(self, obj):
-        # Acceder a los campos de first_name y last_name del responsable desde auth_user
+        
         if obj.responsible and obj.responsible.authuser:
             return f"{obj.responsible.authuser.first_name} {obj.responsible.authuser.last_name}"
         return None
 
     def get_collaboration_count(self, obj):
-        # Contar la cantidad de colaboradores relacionados con el proyecto
+        
         return Collaborations.objects.filter(project=obj).count()
     
     def get_has_applied(self, obj):
-        # Verifica si el usuario autenticado ha postulado al proyecto
+       
         user = self.context['request'].user.id 
         return Solicitudes.objects.filter(id_user=user, id_project=obj).exists()
 
 class ProjectSerializerID(adrf.serializers.ModelSerializer):
-    creator_name = serializers.SerializerMethodField()  # Nombre completo del creador
-    collaboration_count = serializers.SerializerMethodField()  # Cantidad de colaboradores
+    creator_name = serializers.SerializerMethodField() 
+    collaboration_count = serializers.SerializerMethodField()  
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
@@ -193,25 +192,25 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
             'necessary_requirements',
             'accepting_applications',
             'type_aplyuni',
-            'creator_name',  # Nombre completo del creador
-            'collaboration_count',  # Cantidad de colaboradores
+            'creator_name', 
+            'collaboration_count',  
         ]
         extra_kwargs = {
             'id': {'read_only': True},
         }
 
     def get_creator_name(self, obj):
-        # Acceder a los campos de first_name y last_name del responsable desde auth_user
+        
         if obj.responsible and obj.responsible.authuser:
             return f"{obj.responsible.authuser.first_name} {obj.responsible.authuser.last_name}"
         return None
 
     def get_collaboration_count(self, obj):
-        # Contar la cantidad de colaboradores relacionados con el proyecto
+       
         return Collaborations.objects.filter(project=obj).count()
 
     def get_collaborators(self, obj):
-        # Obtener los nombres completos de los colaboradores asociados al proyecto
+        
         collaborators = Collaborations.objects.filter(project=obj).select_related('user__authuser')
         return [
             f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
@@ -250,7 +249,7 @@ class ProjectSerializer(adrf.serializers.ModelSerializer):
             'project_type',
             'priority',
             'responsible',
-            'name_responsible',  # Agregar el nombre del responsable
+            'name_responsible', 
             'detailed_description',
             'type_aplyuni',
             'objectives',
@@ -263,7 +262,7 @@ class ProjectSerializer(adrf.serializers.ModelSerializer):
         ]
     
     def get_name_responsible(self, obj):
-        # Obtener el nombre completo del responsable (creador) del proyecto
+        
         return f"{obj.responsible.authuser.first_name} {obj.responsible.authuser.last_name}"
     
     def get_collaboration_count(self, obj):
