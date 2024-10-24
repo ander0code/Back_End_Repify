@@ -160,7 +160,6 @@ class ProjectSerializerAll(adrf.serializers.ModelSerializer):
         
         return Collaborations.objects.filter(project=obj).count()
     
-
 class ProjectSerializerID(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField() 
     collaboration_count = serializers.SerializerMethodField()  
@@ -305,3 +304,14 @@ class ProjectUpdateSerializer(adrf.serializers.ModelSerializer):
             'accepting_applications', 
             'name_uniuser'
         ]
+        
+class ProfileSerializer(adrf.serializers.ModelSerializer):
+    email = serializers.EmailField(source='authuser.email', read_only=True)
+    first_name = serializers.CharField(source='authuser.first_name', read_only=True)
+    last_name = serializers.CharField(source='authuser.last_name', read_only=True)
+    date_joined = serializers.DateTimeField(source='authuser.date_joined', read_only=True)
+
+    class Meta:
+        model = Users
+        fields = ['university', 'career', 'cycle', 'biography', 'photo', 'achievements', 'created_at', 
+                  'email', 'first_name', 'last_name', 'date_joined']
