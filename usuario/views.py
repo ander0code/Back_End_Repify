@@ -5,8 +5,8 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,CollaboratorSerializer,ProjectSerializer,ProjectUpdateSerializer
-from rest_framework.decorators import action,permission_classes
+from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,CollaboratorSerializer,ProjectSerializer,ProjectUpdateSerializer, ProfileSerializer
+from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
@@ -120,7 +120,6 @@ class LoginViewSet(ViewSet):
         user = await sync_to_async(User.objects.create_user)(
             username=email, email=email, password=password,first_name=first_name, last_name=last_name 
             )
-
 
         # Ahora crea la entrada en la tabla Users
         users_data = {
@@ -344,6 +343,22 @@ class LoginViewSet(ViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
  
+class PerfilViewSet(ViewSet):
+    
+    @action(detail=False, methods=['POST'], url_path='profile', permission_classes=[IsAuthenticated])
+    def profile_data(self, request):
+        # Obtener la instancia del usuario autenticado
+        user_id = request.user.id
+
+        # Filtrar el perfil del usuario desde la tabla Users
+        try:
+            user_profile = Users.objects.get(authuser_id=user_id)
+        except Users.DoesNotExist:
+            return Response({"error": "User profile not found"}, status=404)
+
+        # Serializar los datos del usuario
+        serializer = ProfileSerializer(user_profile)
+        return Response(serializer.data, status=200)
 
 class PublicacionViewSet(ViewSet):
     
