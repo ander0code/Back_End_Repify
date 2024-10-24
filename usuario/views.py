@@ -929,5 +929,31 @@ class PublicacionViewSet(ViewSet):
         else:
             return Response({"message": "No se encontraron proyectos en los que colabora."}, status=status.HTTP_404_NOT_FOUND)
 
+    @action(detail=False, methods=['DELETE'], url_path='delete_collaborators', permission_classes=[IsAuthenticated])
+    def delete_accepted_collaborators(self, request):
+        
+        project_id = request.data.get('project_id')
 
+        if not project_id:
+            return Response({"error": "project_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Verificar que el proyecto existe
+            project = Projects.objects.get(id=project_id)
+
+            # Filtrar las colaboraciones aceptadas para el proyecto
+            accepted_collaborations = Collaborations.objects.filter(project=project, status='accepted')
+
+            if not accepted_collaborations.exists():
+                return Response({"message": "No accepted collaborators found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Eliminar las colaboraciones aceptadas
+            accepted_collaborations.delete()
+
+            return Response({"message": "Accepted collaborators deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+        except Projects.DoesNotExist:
+            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
