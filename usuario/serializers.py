@@ -4,7 +4,7 @@ import adrf
 from adrf.serializers import Serializer
 
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Users, Projects , Collaborations, Solicitudes, Notifications  # Asegúrate de tener bien definido tu modelo de Usuarios
+from .models import Users, Projects , Collaborations, Solicitudes, Notifications, Forms  # Asegúrate de tener bien definido tu modelo de Usuarios
 
 from .models import Users, Projects , Collaborations, Solicitudes  # Asegúrate de tener bien definido tu modelo de Usuarios
 from rest_framework import serializers
@@ -331,3 +331,8 @@ class ProfileSerializer(adrf.serializers.ModelSerializer):
         model = Users
         fields = ['university', 'career', 'cycle', 'biography','interests', 'photo', 'achievements', 'created_at', 
                   'email', 'first_name', 'last_name', 'date_joined']
+
+class FormSerializer(adrf.serializers.ModelSerializer):
+    class Meta:
+        model = Forms
+        fields = "__all__"
