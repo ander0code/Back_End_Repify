@@ -111,3 +111,15 @@ class Users(models.Model):
     class Meta:
         managed = False
         db_table = 'users'
+
+class Forms(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    title = models.TextField(blank=True, null=True)
+    url = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(blank=True, null=True)
+    created_end = models.DateTimeField(blank=True, null=True)
+    user= models.ForeignKey('Users', models.DO_NOTHING, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'forms'
