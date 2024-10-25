@@ -281,7 +281,6 @@ class ProjectSerializer(adrf.serializers.ModelSerializer):
         ]
     
     def get_name_responsible(self, obj):
-        
         return f"{obj.responsible.authuser.first_name} {obj.responsible.authuser.last_name}"
     
     def get_collaboration_count(self, obj):
@@ -290,7 +289,10 @@ class ProjectSerializer(adrf.serializers.ModelSerializer):
     def get_collaborators(self, obj):
         collaborators = Collaborations.objects.filter(project=obj).select_related('user__authuser')
         return [
-            f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
+            {
+                "id": collab.user.id,
+                "name": f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
+            }
             for collab in collaborators if collab.user and collab.user.authuser
         ]
         
