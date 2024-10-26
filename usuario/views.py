@@ -1051,7 +1051,6 @@ class FormsViewSet(ViewSet):
     def create_form(self, request):
         # ID del usuario autenticado
         user_id = request.user.id
-        print(user_id)
 
         # Datos del formulario
         form_data = {
@@ -1069,3 +1068,43 @@ class FormsViewSet(ViewSet):
             return Response(form_serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(form_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @swagger_auto_schema(
+        operation_description="Obtener todos los formularios con los nombres de los usuarios",
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                'Lista de formularios',
+                openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del formulario'),
+                            'title': openapi.Schema(type=openapi.TYPE_STRING, description='Título del formulario'),
+                            'url': openapi.Schema(type=openapi.TYPE_STRING, description='URL del formulario'),
+                            'created_at': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='Fecha de creación del formulario'),
+                            'created_end': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='Fecha de finalización del formulario'),
+                            'user_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario que creó el formulario'),
+                            'first_name': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del usuario'),
+                            'last_name': openapi.Schema(type=openapi.TYPE_STRING, description='Apellido del usuario'),
+                        },
+                    ),
+                ),
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Error en la solicitud'),
+        },
+        tags=["Form Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='get_all_forms', permission_classes=[IsAuthenticated])
+    def get_all_forms(self, request):
+        forms = Forms.objects.all().order_by('-created_at') 
+        data = []
+        
+        for form in forms:
+            form_data = FormSerializer(form).data
+            user = User.objects.get(id=form.user_id)
+            form_data['first_name'] = user.first_name
+            form_data['last_name'] = user.last_name
+            data.append(form_data)
+        
+        return Response(data, status=status.HTTP_200_OK)
