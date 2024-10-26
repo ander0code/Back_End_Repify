@@ -5,12 +5,12 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,ProjectUpdateSerializer,CollaboratorSerializer,ProjectSerializer, NotificationSerializer,ProfileSerializer, NotificationSerializerMS
+from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,ProjectUpdateSerializer,CollaboratorSerializer,ProjectSerializer, NotificationSerializer,ProfileSerializer, NotificationSerializerMS, FormSerializer
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
-from usuario.models import Users,Projects,Solicitudes,Collaborations, Notifications
+from usuario.models import Users,Projects,Solicitudes,Collaborations, Notifications, Forms
 from rest_framework.permissions import AllowAny ,IsAuthenticated
 import random
 
@@ -1125,3 +1125,54 @@ class PublicacionViewSet(ViewSet):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class FormsViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_description="Crear un nuevo formulario",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['title', 'url', 'created_end'],
+            properties={
+                'title': openapi.Schema(type=openapi.TYPE_STRING, description='Título del formulario'),
+                'url': openapi.Schema(type=openapi.TYPE_STRING, description='URL del formulario'),
+            },
+        ),
+        responses={
+            status.HTTP_201_CREATED: openapi.Response(
+                'Formulario creado exitosamente',
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del formulario creado'),
+                        'title': openapi.Schema(type=openapi.TYPE_STRING, description='Título del formulario'),
+                        'url': openapi.Schema(type=openapi.TYPE_STRING, description='URL del formulario'),
+                        'created_at': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='Fecha de creación del formulario'),
+                        'created_end': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='Fecha de finalización del formulario'),
+                        'user_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario que creó el formulario'),
+                    },
+                ),
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Datos inválidos en la solicitud'),
+        },
+        tags=["Form Management"]
+    )
+    @action(detail=False, methods=['POST'], url_path='create_form', permission_classes=[IsAuthenticated])
+    def create_form(self, request):
+        # ID del usuario autenticado
+        user_id = request.user.id
+
+        # Datos del formulario
+        form_data = {
+            **request.data,
+            'created_at': timezone.now().strftime('%Y-%m-%d'),  # Fecha de creación
+            'user': user_id,  # Asigna el usuario autenticado como creador del formulario
+        }
+
+        # Serializa los datos
+        form_serializer = FormSerializer(data=form_data)
+
+        # Guarda si los datos son válidos
+        if form_serializer.is_valid():
+            form_serializer.save()
+            return Response(form_serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(form_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
