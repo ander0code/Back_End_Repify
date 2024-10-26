@@ -1159,12 +1159,11 @@ class FormsViewSet(ViewSet):
     def create_form(self, request):
         # ID del usuario autenticado
         user_id = request.user.id
-        print(user_id)
 
         # Datos del formulario
         form_data = {
             **request.data,
-            'created_at': timezone.now(),  # Fecha de creación
+            'created_at': timezone.now().strftime('%Y-%m-%d'),  # Fecha de creación
             'user': user_id,  # Asigna el usuario autenticado como creador del formulario
         }
 

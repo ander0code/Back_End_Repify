@@ -1,5 +1,5 @@
 from django.contrib.auth import authenticate
- 
+
 import adrf
 from adrf.serializers import Serializer
 
@@ -51,7 +51,6 @@ class LoginSerializer(Serializer):
 
 class CustomUserSerializer(adrf.serializers.ModelSerializer):
     
-    interests = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     created_at = serializers.DateTimeField(format="%Y-%m-%d")
     
     class Meta:
@@ -62,7 +61,6 @@ class CustomUserSerializer(adrf.serializers.ModelSerializer):
             'career',
             'cycle',
             'biography',
-            'interests',
             'photo',
             'achievements',
             'created_at'
@@ -244,10 +242,10 @@ class NotificationSerializer(adrf.serializers.ModelSerializer):
         model = Notifications
         fields = "__all__"
         
-class NotificationSerializerMS(adrf.serializers.ModelSerializer):
+class NotificationSerializerMS(serializers.ModelSerializer):
     class Meta:
         model = Notifications
-        fields = ['id','message'] 
+        fields = ['message'] 
         
 class ProjectSerializer(adrf.serializers.ModelSerializer):
     objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
@@ -281,6 +279,7 @@ class ProjectSerializer(adrf.serializers.ModelSerializer):
         ]
     
     def get_name_responsible(self, obj):
+        
         return f"{obj.responsible.authuser.first_name} {obj.responsible.authuser.last_name}"
     
     def get_collaboration_count(self, obj):
@@ -289,10 +288,7 @@ class ProjectSerializer(adrf.serializers.ModelSerializer):
     def get_collaborators(self, obj):
         collaborators = Collaborations.objects.filter(project=obj).select_related('user__authuser')
         return [
-            {
-                "id": collab.user.id,
-                "name": f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
-            }
+            f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
             for collab in collaborators if collab.user and collab.user.authuser
         ]
         
@@ -325,14 +321,15 @@ class ProfileSerializer(adrf.serializers.ModelSerializer):
     first_name = serializers.CharField(source='authuser.first_name', read_only=True)
     last_name = serializers.CharField(source='authuser.last_name', read_only=True)
     date_joined = serializers.DateTimeField(source='authuser.date_joined', read_only=True)
-    interests = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
-    
+
     class Meta:
         model = Users
-        fields = ['university', 'career', 'cycle', 'biography','interests', 'photo', 'achievements', 'created_at', 
+        fields = ['university', 'career', 'cycle', 'biography', 'photo', 'achievements', 'created_at', 
                   'email', 'first_name', 'last_name', 'date_joined']
 
-class FormSerializer(adrf.serializers.ModelSerializer):
+class FormSerializer(serializers.ModelSerializer):
+
+    created_at =  serializers.DateTimeField(format="%Y-%m-%d") 
     class Meta:
         model = Forms
-        fields = "__all__"
+        fields = ['id', 'title', 'url', 'created_at', 'user']
