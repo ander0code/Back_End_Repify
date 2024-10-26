@@ -399,14 +399,26 @@ class PublicacionViewSet(ViewSet):
                 'description': openapi.Schema(type=openapi.TYPE_STRING, description='Description of the project'),
                 'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='End date of the project'),
                 'status': openapi.Schema(type=openapi.TYPE_STRING, description='Current status of the project'),
-                'project_type': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description="project_type to apply"),
+                'project_type': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Items(type=openapi.TYPE_STRING),
+                    description="List of project types"
+                ),
                 'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Priority level of the project'),
                 'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Detailed description of the project'),
-                'expected_benefits': openapi.Schema(type=openapi.TYPE_STRING, description='Expected benefits of the project'),
-                'necessary_requirements': openapi.Schema(type=openapi.TYPE_STRING, description='Necessary requirements for the project'),
+                'objectives': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Items(type=openapi.TYPE_STRING),
+                    description='List of objectives for the project'
+                ),
+                'necessary_requirements': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Items(type=openapi.TYPE_STRING),
+                    description='List of necessary requirements for the project'
+                ),
                 'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progress percentage of the project'),
-                'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Accepting requests for collaboration'),
-                'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='type_aplyuni of the project'),  
+                'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Indicates if the project is accepting applications'),
+                'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='Specifies application type (e.g., university-restricted or open to all)'),
             },
         ),
         responses={
@@ -424,16 +436,31 @@ class PublicacionViewSet(ViewSet):
                         'project_type': openapi.Schema(
                             type=openapi.TYPE_ARRAY,
                             items=openapi.Items(type=openapi.TYPE_STRING),
-                            description="List of project_type"
+                            description="List of project types"
                         ),
                         'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Priority level of the project'),
                         'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the user responsible for the project'),
                         'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Detailed description of the project'),
-                        'expected_benefits': openapi.Schema(type=openapi.TYPE_STRING, description='Expected benefits of the project'),
-                        'necessary_requirements': openapi.Schema(type=openapi.TYPE_STRING, description='Necessary requirements for the project'),
+                        'objectives': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Items(type=openapi.TYPE_STRING),
+                            description='List of objectives for the project'
+                        ),
+                        'necessary_requirements': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Items(type=openapi.TYPE_STRING),
+                            description='List of necessary requirements for the project'
+                        ),
                         'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progress percentage of the project'),
-                        'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Accepting requests for collaboration'),
-                        'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='type_aplyuni'),
+                        'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Indicates if the project is accepting applications'),
+                        'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='Application type for the project'),
+                        'creator_name': openapi.Schema(type=openapi.TYPE_STRING, description='Name of the project creator'),
+                        'collaboration_count': openapi.Schema(type=openapi.TYPE_INTEGER, description='Count of collaborations on the project'),
+                        'collaborators': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Items(type=openapi.TYPE_STRING),
+                            description="List of collaborator names"
+                        ),
                     },
                 ),
             ),
@@ -473,23 +500,63 @@ class PublicacionViewSet(ViewSet):
                 'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto'),
                 'name': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del proyecto'),
                 'description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción del proyecto'),
-                'start_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de inicio'),
-                'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de finalización'),
-                'status': openapi.Schema(type=openapi.TYPE_STRING, description='Estado del proyecto'),
+                'start_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de inicio del proyecto'),
+                'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de finalización del proyecto'),
+                'status': openapi.Schema(type=openapi.TYPE_STRING, description='Estado actual del proyecto'),
                 'project_type': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de proyecto'),
-                'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Prioridad del proyecto'),
-                'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del responsable'),
-                'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción detallada'),
-                'objectives': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description='Objetivos'),
-                'necessary_requirements': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description='Requisitos necesarios'),
-                'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progreso del proyecto'),
-                'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Si está aceptando aplicaciones'),
-                'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de aplicación')
+                'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Nivel de prioridad del proyecto'),
+                'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario responsable del proyecto'),
+                'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción detallada del proyecto'),
+                'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de aplicación (universidad restringida o abierta)'),
+                'objectives': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Items(type=openapi.TYPE_STRING),
+                    description='Lista de objetivos del proyecto'
+                ),
+                'necessary_requirements': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Items(type=openapi.TYPE_STRING),
+                    description='Lista de requisitos necesarios para el proyecto'
+                ),
+                'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Porcentaje de progreso del proyecto'),
+                'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Indica si el proyecto acepta solicitudes'),
+                'name_uniuser': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre de la universidad del usuario responsable'),
             },
-            required=['project_id']  # El ID del proyecto es obligatorio
+            required=['project_id']
         ),
         responses={
-            status.HTTP_200_OK: openapi.Response('Proyecto actualizado correctamente'),
+            status.HTTP_200_OK: openapi.Response(
+                'Proyecto actualizado correctamente',
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto actualizado'),
+                        'name': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del proyecto'),
+                        'description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción del proyecto'),
+                        'start_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de inicio'),
+                        'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de finalización'),
+                        'status': openapi.Schema(type=openapi.TYPE_STRING, description='Estado del proyecto'),
+                        'project_type': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de proyecto'),
+                        'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Prioridad del proyecto'),
+                        'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario responsable'),
+                        'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción detallada'),
+                        'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de aplicación'),
+                        'objectives': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Items(type=openapi.TYPE_STRING),
+                            description='Lista de objetivos'
+                        ),
+                        'necessary_requirements': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Items(type=openapi.TYPE_STRING),
+                            description='Lista de requisitos necesarios'
+                        ),
+                        'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Porcentaje de progreso del proyecto'),
+                        'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Indica si se aceptan solicitudes'),
+                        'name_uniuser': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre de la universidad asociada al usuario responsable'),
+                    },
+                ),
+            ),
             status.HTTP_404_NOT_FOUND: openapi.Response('Proyecto no encontrado'),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Datos inválidos'),
         },
@@ -1176,3 +1243,43 @@ class FormsViewSet(ViewSet):
             return Response(form_serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(form_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @swagger_auto_schema(
+        operation_description="Obtener todos los formularios con los nombres de los usuarios",
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                'Lista de formularios',
+                openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del formulario'),
+                            'title': openapi.Schema(type=openapi.TYPE_STRING, description='Título del formulario'),
+                            'url': openapi.Schema(type=openapi.TYPE_STRING, description='URL del formulario'),
+                            'created_at': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='Fecha de creación del formulario'),
+                            'created_end': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='Fecha de finalización del formulario'),
+                            'user_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario que creó el formulario'),
+                            'first_name': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del usuario'),
+                            'last_name': openapi.Schema(type=openapi.TYPE_STRING, description='Apellido del usuario'),
+                        },
+                    ),
+                ),
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Error en la solicitud'),
+        },
+        tags=["Form Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='get_all_forms', permission_classes=[IsAuthenticated])
+    def get_all_forms(self, request):
+        forms = Forms.objects.all().order_by('-created_at') 
+        data = []
+        
+        for form in forms:
+            form_data = FormSerializer(form).data
+            user = User.objects.get(id=form.user_id)
+            form_data['first_name'] = user.first_name
+            form_data['last_name'] = user.last_name
+            data.append(form_data)
+        
+        return Response(data, status=status.HTTP_200_OK)

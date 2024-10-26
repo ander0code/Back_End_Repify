@@ -50,7 +50,7 @@ class LoginSerializer(Serializer):
         }
 
 class CustomUserSerializer(adrf.serializers.ModelSerializer):
-    
+    interests = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     created_at = serializers.DateTimeField(format="%Y-%m-%d")
     
     class Meta:
@@ -60,6 +60,7 @@ class CustomUserSerializer(adrf.serializers.ModelSerializer):
             'university',
             'career',
             'cycle',
+            'interests',
             'biography',
             'photo',
             'achievements',
@@ -243,10 +244,10 @@ class NotificationSerializer(adrf.serializers.ModelSerializer):
         model = Notifications
         fields = "__all__"
         
-class NotificationSerializerMS(serializers.ModelSerializer):
+class NotificationSerializerMS(adrf.serializers.ModelSerializer):
     class Meta:
         model = Notifications
-        fields = ['message'] 
+        fields = ['id','message'] 
         
 class ProjectSerializer(adrf.serializers.ModelSerializer):
     objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
@@ -289,7 +290,10 @@ class ProjectSerializer(adrf.serializers.ModelSerializer):
     def get_collaborators(self, obj):
         collaborators = Collaborations.objects.filter(project=obj).select_related('user__authuser')
         return [
-            f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
+            {
+                "id": collab.user.id,
+                "name": f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
+            }
             for collab in collaborators if collab.user and collab.user.authuser
         ]
         
@@ -322,10 +326,11 @@ class ProfileSerializer(adrf.serializers.ModelSerializer):
     first_name = serializers.CharField(source='authuser.first_name', read_only=True)
     last_name = serializers.CharField(source='authuser.last_name', read_only=True)
     date_joined = serializers.DateTimeField(source='authuser.date_joined', read_only=True)
+    interests = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
 
     class Meta:
         model = Users
-        fields = ['university', 'career', 'cycle', 'biography', 'photo', 'achievements', 'created_at', 
+        fields = ['university', 'career', 'cycle', 'biography','interests','photo', 'achievements', 'created_at', 
                   'email', 'first_name', 'last_name', 'date_joined']
 
 class FormSerializer(serializers.ModelSerializer):
