@@ -168,7 +168,7 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     has_applied = serializers.SerializerMethodField()
-    
+    objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     class Meta:
         model = Projects
         fields = [
@@ -185,6 +185,7 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
             'detailed_description',
             'necessary_requirements',
             'progress',
+            'objectives',
             'necessary_requirements',
             'accepting_applications',
             'type_aplyuni',
