@@ -575,6 +575,27 @@ class PublicacionViewSet(ViewSet):
         serializer = ProjectSerializerAll(projects, many=True)
         
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @swagger_auto_schema(
+        operation_description="Retrieve the 3 most recent projects in descending order by start date",
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="List of the 3 most recent projects",
+                schema=ProjectSerializerAll(many=True)
+            ),
+            status.HTTP_400_BAD_REQUEST: "Invalid request",
+        },
+        tags=["CRUD Project Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='view_recent_projects', permission_classes=[IsAuthenticated])
+    def view_recent_projects(self, request):
+        # Obtener los 3 proyectos más recientes ordenados por start_date en orden descendente
+        recent_projects = Projects.objects.all().order_by('-id')[:3]
+        
+        # Serializar los proyectos
+        serializer = ProjectSerializerAll(recent_projects, many=True)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
         
     #Postulaziones    
         
