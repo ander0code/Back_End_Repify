@@ -659,7 +659,7 @@ class PublicacionViewSet(ViewSet):
     @action(detail=False, methods=['GET'], url_path='view_project_all', permission_classes=[IsAuthenticated])
     def view_project_all(self, request):
         # Obtener todos los proyectos en orden ascendente por start_date
-        projects = Projects.objects.all().order_by('start_date')
+        projects = Projects.objects.all().order_by('-id')
         
         # Serializar los proyectos
         serializer = ProjectSerializerAll(projects, many=True)
