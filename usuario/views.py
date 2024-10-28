@@ -16,9 +16,6 @@ import random
 
 from asgiref.sync import sync_to_async
 
-#acuerdate de que debes usar async y await
-
-# Create your views here.
 class LoginViewSet(ViewSet):
     
     @swagger_auto_schema(
@@ -308,18 +305,34 @@ class PerfilViewSet(ViewSet):
     )
     @action(detail=False, methods=['POST'], url_path='profile', permission_classes=[IsAuthenticated])
     async def profile_data(self, request):
-        # Obtener la instancia del usuario autenticado
         user_id = request.user.id
 
-        # Filtrar el perfil del usuario desde la tabla Users
         try:
             user_profile = await sync_to_async(Users.objects.get)(authuser_id=user_id)
+            auth_user = request.user
+
+            # Reunir los datos para serializar
+            profile_data = {
+                "university": user_profile.university,
+                "career": user_profile.career,
+                "cycle": user_profile.cycle,
+                "biography": user_profile.biography,
+                "interests": user_profile.interests,
+                "photo": user_profile.photo,
+                "achievements": user_profile.achievements,
+                "created_at": user_profile.created_at,
+                # Datos de authuser
+                "email": auth_user.email,
+                "first_name": auth_user.first_name,
+                "last_name": auth_user.last_name,
+                "date_joined": auth_user.date_joined,
+            }
+
+            serializer = ProfileSerializer(profile_data)
+            return Response(serializer.data, status=200)
+
         except Users.DoesNotExist:
             return Response({"error": "User profile not found"}, status=404)
-
-        # Serializar los datos del usuario
-        serializer = ProfileSerializer(user_profile)
-        return Response(serializer.data, status=200)
 
     @swagger_auto_schema(
         operation_description="Update user profile by ID. Accepts various fields such as university, career, cycle, biography, interests, photo, achievements, and created_at.",
@@ -387,8 +400,7 @@ class PerfilViewSet(ViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class PublicacionViewSet(ViewSet):
-    
-    
+     
     @swagger_auto_schema(
         operation_description="Create a new project",
         request_body=openapi.Schema(
@@ -469,11 +481,11 @@ class PublicacionViewSet(ViewSet):
         tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='create_proyect', permission_classes=[IsAuthenticated])
-    def create_project(self, request):
+    async def create_project(self, request):
         
         responsible_user_id = request.user.id
         
-        custom_user = Users.objects.get(authuser=responsible_user_id)
+        custom_user = await sync_to_async(Users.objects.get)(authuser=responsible_user_id)
         
         # Rellenar automáticamente el campo 'responsible' con el ID del usuario autenticado
         project_data = {
@@ -563,7 +575,7 @@ class PublicacionViewSet(ViewSet):
         tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['PUT'], url_path='update-project', permission_classes=[IsAuthenticated])
-    def update_project(self, request):
+    async def update_project(self, request):
         # Extraer el ID del proyecto del cuerpo de la solicitud
         project_id = request.data.get('project_id')
         if not project_id:
@@ -573,12 +585,12 @@ class PublicacionViewSet(ViewSet):
         user_instance = request.user.id
 
         # Buscar el proyecto por su ID y verificar que el responsable es el usuario autenticado
-        project = get_object_or_404(Projects, id=project_id, responsible=user_instance)
+        project = await sync_to_async(get_object_or_404)(Projects, id=project_id, responsible=user_instance)
 
         # Serializar los datos de actualización
         serializer = ProjectUpdateSerializer(project, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
+        if await sync_to_async(serializer.is_valid)():
+            await sync_to_async(serializer.save)()
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -599,12 +611,12 @@ class PublicacionViewSet(ViewSet):
         tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['delete'], url_path='delete_project', permission_classes=[IsAuthenticated])
-    def delete_project(self, request):
+    async def delete_project(self, request):
         try:
             # Obtener el proyecto usando el ID (pk)
             project_id = request.data.get('id')
-            project = Projects.objects.get(pk=project_id)
-            project.delete()  # Elimina el proyecto
+            project = await sync_to_async(Projects.objects.get)(pk=project_id)
+            await sync_to_async(project.delete)()  # Elimina el proyecto
             return Response(status=status.HTTP_204_NO_CONTENT)  # Respuesta sin contenido
         except Projects.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -629,7 +641,7 @@ class PublicacionViewSet(ViewSet):
         tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='view_project_id', permission_classes=[IsAuthenticated])
-    def view_project_id(self, request):
+    async def view_project_id(self, request):
         project_id = request.data.get('id')
 
         if not project_id:
@@ -637,7 +649,7 @@ class PublicacionViewSet(ViewSet):
 
         try:
             # Obtener el proyecto usando el ID
-            project = Projects.objects.get(pk=project_id)
+            project = await sync_to_async(Projects.objects.get)(pk=project_id)
         except Projects.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -657,16 +669,55 @@ class PublicacionViewSet(ViewSet):
         tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['GET'], url_path='view_project_all', permission_classes=[IsAuthenticated])
-    def view_project_all(self, request):
-        # Obtener todos los proyectos en orden ascendente por start_date
-        projects = Projects.objects.all().order_by('start_date')
-        
-        # Serializar los proyectos
-        serializer = ProjectSerializerAll(projects, many=True)
-        
-        return Response(serializer.data, status=status.HTTP_200_OK)
-        
-    #Postulaziones    
+    async def view_project_all(self, request):
+        try:
+            # Obtener todos los proyectos de forma asíncrona
+            projects = await sync_to_async(list)(Projects.objects.all().order_by('-id'))
+
+            project_data = []
+            for project in projects:
+                # Obtiene el nombre del creador y el conteo de colaboraciones de forma asíncrona
+                creator_name = await self.get_creator_name(project)
+
+                collaboration_count = await self.get_collaboration_count(project)
+
+                # Agrega los datos al diccionario
+                project_dict = {
+                    'id': project.id,
+                    'name': project.name,
+                    'description': project.description,
+                    'start_date': project.start_date,
+                    'end_date': project.end_date,
+                    'status': project.status,
+                    'project_type': project.project_type,
+                    'priority': project.priority,
+                    'responsible': project.responsible_id,
+                    'name_uniuser': project.name_uniuser,
+                    'detailed_description': project.detailed_description,
+                    'progress': project.progress,
+                    'accepting_applications': project.accepting_applications,
+                    'type_aplyuni': project.type_aplyuni,
+                    'creator_name': creator_name,
+                    'collaboration_count': collaboration_count,
+                }
+                project_data.append(project_dict)
+
+            return Response(project_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    async def get_creator_name(self, obj):
+        if obj.responsible_id: 
+            authuser = await sync_to_async(User.objects.get)(id=obj.responsible_id)
+            if authuser:
+                return f"{authuser.first_name} {authuser.last_name}"
+        return None
+
+    async def get_collaboration_count(self, obj):
+        count = await sync_to_async(Collaborations.objects.filter(project=obj).count)()
+        return count
         
     @swagger_auto_schema(
         operation_description="Aplicar a un proyecto",
@@ -710,19 +761,19 @@ class PublicacionViewSet(ViewSet):
         tags=["Notificacions Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='ApplyProject', permission_classes=[IsAuthenticated])
-    def ApplyProject(self, request):
+    async def ApplyProject(self, request):
         project_id = request.data.get('project_id')
         user = request.user
         
 
         try:
             # Verificar si el proyecto acepta aplicaciones
-            project = Projects.objects.get(id=project_id)
+            project = await sync_to_async(Projects.objects.get)(id=project_id)
             if not project.accepting_applications:
                 return Response({"error": "Este proyecto no está aceptando aplicaciones"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Verificar si ya existe una solicitud para este proyecto y usuario
-            existing_solicitud = Solicitudes.objects.filter(id_user=user.id, id_project=project_id).first()
+            existing_solicitud = await sync_to_async(Solicitudes.objects.filter(id_user=user.id, id_project=project_id).first)()
             if existing_solicitud:
                 return Response({"error": "Ya has aplicado a este proyecto."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -730,7 +781,7 @@ class PublicacionViewSet(ViewSet):
             lider_id = project.responsible_id  # Suponiendo que el campo 'responsible' es un ForeignKey
 
             # Conectar con la tabla auth_user para obtener los datos del líder
-            lider = User.objects.get(id=lider_id)  # auth_user se mapea al modelo 'User' de Django
+            lider = await sync_to_async(User.objects.get)(id=lider_id)  # auth_user se mapea al modelo 'User' de Django
 
             # Obtener el nombre completo del líder
             name_lider = f"{lider.first_name} {lider.last_name}"
@@ -748,11 +799,9 @@ class PublicacionViewSet(ViewSet):
 
             solicitud_serializer = SolicitudSerializer(data=solicitud_data)
 
-            if solicitud_serializer.is_valid():
-                solicitud_serializer.save()
-                print(user.id)
-                
-                user_proyect = Projects.objects.get(id=project_id)
+            if await sync_to_async(solicitud_serializer.is_valid)():
+                await sync_to_async(solicitud_serializer.save)()
+             
                 # Crear la notificación para el propietario del proyecto
                 notification_data = {
                     'sender': user.id,  
@@ -763,8 +812,8 @@ class PublicacionViewSet(ViewSet):
                 }
                 notification_serializer = NotificationSerializer(data=notification_data)
                 
-                if notification_serializer.is_valid():
-                    notification_serializer.save()
+                if await sync_to_async(notification_serializer.is_valid)():
+                    await sync_to_async(notification_serializer.save)()
                 else:
                     return Response(notification_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -796,12 +845,12 @@ class PublicacionViewSet(ViewSet):
         tags=["Notificacions Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='AcceptProject',permission_classes=[IsAuthenticated])
-    def AcceptProject(self, request):
+    async def AcceptProject(self, request):
         id_solicitud = request.data.get('id_solicitud')
         user = request.user
 
         try:
-            solicitud = Solicitudes.objects.get(id_solicitud=id_solicitud)
+            solicitud = await sync_to_async(Solicitudes.objects.get)(id_solicitud=id_solicitud)
             
             # Verificar si el usuario es el responsable del proyecto
             if solicitud.id_project.responsible.id != user.id:
@@ -809,7 +858,7 @@ class PublicacionViewSet(ViewSet):
 
             # Cambiar el estado de la solicitud a 'Aceptada'
             solicitud.status = 'Aceptada'
-            solicitud.save()
+            await sync_to_async(solicitud.save)()
 
             # Crear una colaboración
             collaboration_data = {
@@ -819,8 +868,8 @@ class PublicacionViewSet(ViewSet):
             }
             collaboration_serializer = CollaboratorSerializer(data=collaboration_data)
             
-            if collaboration_serializer.is_valid():
-                collaboration_serializer.save()
+            if await sync_to_async(collaboration_serializer.is_valid)():
+                await sync_to_async(collaboration_serializer.save)()
                 # Crear la notificación para el usuario que aplicó al proyecto
                 notification_data = {
                     'sender': user.id,  # El usuario que acepta la solicitud
@@ -831,8 +880,8 @@ class PublicacionViewSet(ViewSet):
                 }
                 notification_serializer = NotificationSerializer(data=notification_data)
                 
-                if notification_serializer.is_valid():
-                    notification_serializer.save()
+                if await sync_to_async(notification_serializer.is_valid)():
+                    await sync_to_async(notification_serializer.save)()
                 else:
                     return Response(notification_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 
@@ -860,12 +909,12 @@ class PublicacionViewSet(ViewSet):
         tags=["Notificacions Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='Denyproject',permission_classes=[IsAuthenticated])
-    def Denyproject(self, request):
+    async def Denyproject(self, request):
         solicitud_id = request.data.get('solicitud_id')
         user = request.user
 
         try:
-            solicitud = Solicitudes.objects.get(id_solicitud=solicitud_id)
+            solicitud = await sync_to_async(Solicitudes.objects.get)(id_solicitud=solicitud_id)
             
             # Verificar si el usuario es el responsable del proyecto
             if solicitud.id_project.responsible.id != user.id:
@@ -873,7 +922,7 @@ class PublicacionViewSet(ViewSet):
 
             # Cambiar el estado de la solicitud a 'Negada'
             solicitud.status = 'Rechazado'
-            solicitud.save()
+            await sync_to_async(solicitud.save)()
             
              # Crear la notificación para el usuario que aplicó al proyecto
             notification_data = {
@@ -885,8 +934,8 @@ class PublicacionViewSet(ViewSet):
             }
             notification_serializer = NotificationSerializer(data=notification_data)
             
-            if notification_serializer.is_valid():
-                notification_serializer.save()
+            if await sync_to_async(notification_serializer.is_valid)():
+                await sync_to_async(notification_serializer.save)()
             else:
                 return Response(notification_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
@@ -904,12 +953,12 @@ class PublicacionViewSet(ViewSet):
         tags=["Notificacions  Management"]
     )
     @action(detail=False, methods=['GET'], url_path='GetNotifications', permission_classes=[IsAuthenticated])
-    def GetNotifications(self, request):
+    async def GetNotifications(self, request):
         user = request.user
         
         try:
             # Obtener todas las notificaciones del usuario logueado
-            notifications = Notifications.objects.filter(user_id=user.id).order_by('-id')
+            notifications = await sync_to_async(list)(Notifications.objects.filter(user_id=user.id).order_by('-id'))
 
             # Serializar solo los mensajes de las notificaciones
             serializer = NotificationSerializerMS(notifications, many=True)
@@ -941,7 +990,7 @@ class PublicacionViewSet(ViewSet):
         tags=["Notificacions Management"]
     )
     @action(detail=False, methods=['GET'], url_path='solicitudes_user', permission_classes=[IsAuthenticated])
-    def get_solicitudes_user(self, request):
+    async def get_solicitudes_user(self, request):
         user = request.user.id  
         
         try:
@@ -983,7 +1032,7 @@ class PublicacionViewSet(ViewSet):
     tags=["Notificacions  Management"]
     )        
     @action(detail=False, methods=['POST'], url_path='solicitudes_project',permission_classes=[IsAuthenticated])
-    def get_solicitudes_project(self, request):
+    async def get_solicitudes_project(self, request):
         project_id = request.data.get('project_id')
 
         if not project_id:
@@ -1004,7 +1053,7 @@ class PublicacionViewSet(ViewSet):
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
         
     @action(detail=False, methods=['DELETE'], url_path='delete_solicitud', permission_classes=[IsAuthenticated])
-    def delete_solicitud(self, request):
+    async def delete_solicitud(self, request):
         solicitud_id = request.data.get('solicitud_id')
         user = request.user.id  
 
@@ -1040,7 +1089,7 @@ class PublicacionViewSet(ViewSet):
         tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['GET'], url_path='my-projects', permission_classes=[IsAuthenticated])
-    def view_project_usercreator(self, request):
+    async def view_project_usercreator(self, request):
         # Obtener la instancia del modelo Users asociada al usuario autenticado
         try:
             user_instance = request.user.id  # Ajusta esto si tu relación es diferente
@@ -1072,7 +1121,7 @@ class PublicacionViewSet(ViewSet):
         tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='get-project-id', permission_classes=[IsAuthenticated])
-    def get_project_id(self, request):
+    async def get_project_id(self, request):
         project_id = request.data.get('id_project')
         if not project_id:
             return Response({"message": "ID del proyecto es requerido."}, status=status.HTTP_400_BAD_REQUEST)
@@ -1106,7 +1155,7 @@ class PublicacionViewSet(ViewSet):
         tags=["Collab Management"]
     )
     @action(detail=False, methods=['GET'], url_path='my-collaborated-projects', permission_classes=[IsAuthenticated])
-    def view_project_usercollab(self, request):
+    async def view_project_usercollab(self, request):
         # Obtener la instancia del usuario autenticado
         user_instance = request.user.id  # Ajusta esto si tu relación es diferente
 
@@ -1143,7 +1192,7 @@ class PublicacionViewSet(ViewSet):
         tags=["Collab Management"]
     )
     @action(detail=False, methods=['DELETE'], url_path='delete_collaborator', permission_classes=[IsAuthenticated])
-    def delete_collaborator(self, request):
+    async def delete_collaborator(self, request):
         project_id = request.data.get('project_id')
         user_id = request.data.get('user_id')
 
@@ -1223,7 +1272,7 @@ class FormsViewSet(ViewSet):
         tags=["Form Management"]
     )
     @action(detail=False, methods=['POST'], url_path='create_form', permission_classes=[IsAuthenticated])
-    def create_form(self, request):
+    async def create_form(self, request):
         # ID del usuario autenticado
         user_id = request.user.id
 
@@ -1271,7 +1320,7 @@ class FormsViewSet(ViewSet):
         tags=["Form Management"]
     )
     @action(detail=False, methods=['GET'], url_path='get_all_forms', permission_classes=[IsAuthenticated])
-    def get_all_forms(self, request):
+    async def get_all_forms(self, request):
         forms = Forms.objects.all().order_by('-created_at') 
         data = []
         

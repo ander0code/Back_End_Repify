@@ -2,11 +2,12 @@ from django.contrib.auth import authenticate
 
 import adrf
 from adrf.serializers import Serializer
+from asgiref.sync import sync_to_async
 
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Users, Projects , Collaborations, Solicitudes, Notifications, Forms  # Asegúrate de tener bien definido tu modelo de Usuarios
+from .models import Users, Projects , Collaborations, Solicitudes, Notifications, Forms  
 
-from .models import Users, Projects , Collaborations, Solicitudes  # Asegúrate de tener bien definido tu modelo de Usuarios
+from .models import Users, Projects , Collaborations, Solicitudes  
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -124,11 +125,10 @@ class ProjectSerializerCreate(adrf.serializers.ModelSerializer):
         ]
 
 class ProjectSerializerAll(adrf.serializers.ModelSerializer):
-    creator_name = serializers.SerializerMethodField() 
-    collaboration_count = serializers.SerializerMethodField() 
+    creator_name = serializers.SerializerMethodField()
+    collaboration_count = serializers.SerializerMethodField()
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
-    
-    
+
     class Meta:
         model = Projects
         fields = [
@@ -146,22 +146,25 @@ class ProjectSerializerAll(adrf.serializers.ModelSerializer):
             'progress',
             'accepting_applications',
             'type_aplyuni',
-            'creator_name',  
+            'creator_name',
             'collaboration_count'
         ]
         extra_kwargs = {
             'id': {'read_only': True},
         }
 
-    def get_creator_name(self, obj):
-        
-        if obj.responsible and obj.responsible.authuser:
-            return f"{obj.responsible.authuser.first_name} {obj.responsible.authuser.last_name}"
-        return None
+    # async def get_creator_name(self, obj):
+    #     if obj.responsible:
+    #         # Realiza la consulta de manera síncrona
+    #         authuser = await sync_to_async(list)(Users.objects.filter(id=obj.responsible.id).first())
+    #         if authuser:
+    #             return f"{authuser.first_name} {authuser.last_name}"
+    #     return None
 
-    def get_collaboration_count(self, obj):
-        
-        return Collaborations.objects.filter(project=obj).count()
+    # async def get_collaboration_count(self, obj):
+    #     # Obtiene el conteo de colaboraciones de manera síncrona
+    #     count = await sync_to_async(list)(Collaborations.objects.filter(project=obj).count())
+    #     return count
     
 class ProjectSerializerID(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField() 
@@ -322,10 +325,11 @@ class ProjectUpdateSerializer(adrf.serializers.ModelSerializer):
         ]
         
 class ProfileSerializer(adrf.serializers.ModelSerializer):
-    email = serializers.EmailField(source='authuser.email', read_only=True)
-    first_name = serializers.CharField(source='authuser.first_name', read_only=True)
-    last_name = serializers.CharField(source='authuser.last_name', read_only=True)
-    date_joined = serializers.DateTimeField(source='authuser.date_joined', read_only=True)
+    # Campos de `authuser`
+    email = serializers.EmailField(read_only=True)
+    first_name = serializers.CharField(read_only=True)
+    last_name = serializers.CharField(read_only=True)
+    date_joined = serializers.DateTimeField(read_only=True)
     interests = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
 
     class Meta:
@@ -333,7 +337,7 @@ class ProfileSerializer(adrf.serializers.ModelSerializer):
         fields = ['university', 'career', 'cycle', 'biography','interests','photo', 'achievements', 'created_at', 
                   'email', 'first_name', 'last_name', 'date_joined']
 
-class FormSerializer(serializers.ModelSerializer):
+class FormSerializer(adrf.serializers.ModelSerializer):
 
     created_at =  serializers.DateTimeField(format="%Y-%m-%d") 
     class Meta:
