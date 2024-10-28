@@ -253,60 +253,6 @@ class LoginViewSet(ViewSet):
             return Response({"error": "Invalid email"}, status=status.HTTP_400_BAD_REQUEST)
         except Users.DoesNotExist:
             return Response({"error": "User profile not found"}, status=status.HTTP_400_BAD_REQUEST)
-    
-    @swagger_auto_schema(
-        operation_description="Update user profile by ID",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['id'],
-            properties={
-                'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the user to view'),
-                'university': openapi.Schema(type=openapi.TYPE_STRING, description='University of the user'),
-                'career': openapi.Schema(type=openapi.TYPE_STRING, description='Career of the user'),
-                'cycle': openapi.Schema(type=openapi.TYPE_STRING, description='Cycle of the user'),
-                'biography': openapi.Schema(type=openapi.TYPE_STRING, description='Biography of the user'),
-                'photo': openapi.Schema(type=openapi.TYPE_STRING, description='Photo URL of the user'),
-                'achievements': openapi.Schema(type=openapi.TYPE_STRING, description='Achievements of the user'),
-            },
-        ),
-        responses={
-            status.HTTP_200_OK: openapi.Response(
-                'User profile updated successfully',
-                openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        'university': openapi.Schema(type=openapi.TYPE_STRING, description='University of the user'),
-                        'career': openapi.Schema(type=openapi.TYPE_STRING, description='Career of the user'),
-                        'cycle': openapi.Schema(type=openapi.TYPE_STRING, description='Cycle of the user'),
-                        'biography': openapi.Schema(type=openapi.TYPE_STRING, description='Biography of the user'),
-                        'photo': openapi.Schema(type=openapi.TYPE_STRING, description='Photo URL of the user'),
-                        'achievements': openapi.Schema(type=openapi.TYPE_STRING, description='Achievements of the user'),
-                    }
-                )
-            ),
-            status.HTTP_404_NOT_FOUND: openapi.Response('User not found'),
-            status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid input data'),
-        },
-        tags=["User Management"]
-    )
-    @action(detail=False, methods=['PUT'], url_path='update-profile',permission_classes=[IsAuthenticated])
-    async def update_user_profile(self, request):
-
-        user_id = request.data.get('id')
-        try:
-            # Obtener el perfil de usuario usando el ID (pk)
-            user_profile = await sync_to_async(Users.objects.get)(pk=user_id)
-        except Users.DoesNotExist:
-            return Response({"error": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Crea un serializador con los datos actuales del perfil y los nuevos datos enviados
-        serializer = CustomUserSerializer(user_profile, data=request.data, partial=True)
-
-        if serializer.is_valid():
-            await sync_to_async(serializer.save)()  # Guarda las actualizaciones
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @swagger_auto_schema(
         operation_description="Delete a user and their associated auth_user entry by ID",
@@ -347,14 +293,27 @@ class LoginViewSet(ViewSet):
  
 class PerfilViewSet(ViewSet):
     
+    @swagger_auto_schema(
+        method='post',
+        operation_summary="Retrieve Profile Data",
+        operation_description="Retrieve the profile data of the authenticated user.",
+        responses={
+            200: openapi.Response(
+                description="Successful response with user profile data.",
+                schema=ProfileSerializer()
+            ),
+            404: openapi.Response(description="User profile not found.")
+        },
+        tags = ["Profile Management"]
+    )
     @action(detail=False, methods=['POST'], url_path='profile', permission_classes=[IsAuthenticated])
-    def profile_data(self, request):
+    async def profile_data(self, request):
         # Obtener la instancia del usuario autenticado
         user_id = request.user.id
 
         # Filtrar el perfil del usuario desde la tabla Users
         try:
-            user_profile = Users.objects.get(authuser_id=user_id)
+            user_profile = await sync_to_async(Users.objects.get)(authuser_id=user_id)
         except Users.DoesNotExist:
             return Response({"error": "User profile not found"}, status=404)
 
@@ -362,9 +321,73 @@ class PerfilViewSet(ViewSet):
         serializer = ProfileSerializer(user_profile)
         return Response(serializer.data, status=200)
 
+    @swagger_auto_schema(
+        operation_description="Update user profile by ID. Accepts various fields such as university, career, cycle, biography, interests, photo, achievements, and created_at.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['id'],
+            properties={
+                'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the user to view'),
+                'university': openapi.Schema(type=openapi.TYPE_STRING, description='University of the user'),
+                'career': openapi.Schema(type=openapi.TYPE_STRING, description='Career of the user'),
+                'cycle': openapi.Schema(type=openapi.TYPE_STRING, description='Cycle of the user'),
+                'biography': openapi.Schema(type=openapi.TYPE_STRING, description='Biography of the user'),
+                'interests': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Items(type=openapi.TYPE_STRING, maxLength=500),
+                    description='List of user interests (maximum 500 characters each)'
+                ),
+                'photo': openapi.Schema(type=openapi.TYPE_STRING, description='Photo URL of the user'),
+                'achievements': openapi.Schema(type=openapi.TYPE_STRING, description='Achievements of the user'),
+            },
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                'User profile updated successfully',
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'university': openapi.Schema(type=openapi.TYPE_STRING, description='University of the user'),
+                        'career': openapi.Schema(type=openapi.TYPE_STRING, description='Career of the user'),
+                        'cycle': openapi.Schema(type=openapi.TYPE_STRING, description='Cycle of the user'),
+                        'biography': openapi.Schema(type=openapi.TYPE_STRING, description='Biography of the user'),
+                        'interests': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Items(type=openapi.TYPE_STRING, maxLength=500),
+                            description='List of user interests'
+                        ),
+                        'photo': openapi.Schema(type=openapi.TYPE_STRING, description='Photo URL of the user'),
+                        'achievements': openapi.Schema(type=openapi.TYPE_STRING, description='Achievements of the user'),
+                        'created_at': openapi.Schema(type=openapi.TYPE_STRING, description='Profile creation date, format YYYY-MM-DD')
+                    }
+                )
+            ),
+            status.HTTP_404_NOT_FOUND: openapi.Response('User not found'),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid input data'),
+        },
+        tags=["Profile Management"]
+    )
+    @action(detail=False, methods=['PUT'], url_path='update-profile',permission_classes=[IsAuthenticated])
+    async def update_user_profile(self, request):
+
+        user_id = request.data.get('id')
+        try:
+            # Obtener el perfil de usuario usando el ID (pk)
+            user_profile = await sync_to_async(Users.objects.get)(pk=user_id)
+        except Users.DoesNotExist:
+            return Response({"error": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Crea un serializador con los datos actuales del perfil y los nuevos datos enviados
+        serializer = CustomUserSerializer(user_profile, data=request.data, partial=True)
+
+        if await sync_to_async(serializer.is_valid)():
+            await sync_to_async(serializer.save)()  # Guarda las actualizaciones
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class PublicacionViewSet(ViewSet):
     
-    # fUNCIONES GENERALES
     
     @swagger_auto_schema(
         operation_description="Create a new project",
@@ -376,14 +399,26 @@ class PublicacionViewSet(ViewSet):
                 'description': openapi.Schema(type=openapi.TYPE_STRING, description='Description of the project'),
                 'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='End date of the project'),
                 'status': openapi.Schema(type=openapi.TYPE_STRING, description='Current status of the project'),
-                'project_type': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description="project_type to apply"),
+                'project_type': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Items(type=openapi.TYPE_STRING),
+                    description="List of project types"
+                ),
                 'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Priority level of the project'),
                 'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Detailed description of the project'),
-                'expected_benefits': openapi.Schema(type=openapi.TYPE_STRING, description='Expected benefits of the project'),
-                'necessary_requirements': openapi.Schema(type=openapi.TYPE_STRING, description='Necessary requirements for the project'),
+                'objectives': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Items(type=openapi.TYPE_STRING),
+                    description='List of objectives for the project'
+                ),
+                'necessary_requirements': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Items(type=openapi.TYPE_STRING),
+                    description='List of necessary requirements for the project'
+                ),
                 'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progress percentage of the project'),
-                'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Accepting requests for collaboration'),
-                'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='type_aplyuni of the project'),  
+                'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Indicates if the project is accepting applications'),
+                'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='Specifies application type (e.g., university-restricted or open to all)'),
             },
         ),
         responses={
@@ -401,16 +436,31 @@ class PublicacionViewSet(ViewSet):
                         'project_type': openapi.Schema(
                             type=openapi.TYPE_ARRAY,
                             items=openapi.Items(type=openapi.TYPE_STRING),
-                            description="List of project_type"
+                            description="List of project types"
                         ),
                         'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Priority level of the project'),
                         'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the user responsible for the project'),
                         'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Detailed description of the project'),
-                        'expected_benefits': openapi.Schema(type=openapi.TYPE_STRING, description='Expected benefits of the project'),
-                        'necessary_requirements': openapi.Schema(type=openapi.TYPE_STRING, description='Necessary requirements for the project'),
+                        'objectives': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Items(type=openapi.TYPE_STRING),
+                            description='List of objectives for the project'
+                        ),
+                        'necessary_requirements': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Items(type=openapi.TYPE_STRING),
+                            description='List of necessary requirements for the project'
+                        ),
                         'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progress percentage of the project'),
-                        'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Accepting requests for collaboration'),
-                        'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='type_aplyuni'),
+                        'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Indicates if the project is accepting applications'),
+                        'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='Application type for the project'),
+                        'creator_name': openapi.Schema(type=openapi.TYPE_STRING, description='Name of the project creator'),
+                        'collaboration_count': openapi.Schema(type=openapi.TYPE_INTEGER, description='Count of collaborations on the project'),
+                        'collaborators': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Items(type=openapi.TYPE_STRING),
+                            description="List of collaborator names"
+                        ),
                     },
                 ),
             ),
@@ -450,27 +500,67 @@ class PublicacionViewSet(ViewSet):
                 'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto'),
                 'name': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del proyecto'),
                 'description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción del proyecto'),
-                'start_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de inicio'),
-                'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de finalización'),
-                'status': openapi.Schema(type=openapi.TYPE_STRING, description='Estado del proyecto'),
+                'start_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de inicio del proyecto'),
+                'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de finalización del proyecto'),
+                'status': openapi.Schema(type=openapi.TYPE_STRING, description='Estado actual del proyecto'),
                 'project_type': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de proyecto'),
-                'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Prioridad del proyecto'),
-                'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del responsable'),
-                'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción detallada'),
-                'objectives': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description='Objetivos'),
-                'necessary_requirements': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description='Requisitos necesarios'),
-                'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progreso del proyecto'),
-                'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Si está aceptando aplicaciones'),
-                'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de aplicación')
+                'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Nivel de prioridad del proyecto'),
+                'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario responsable del proyecto'),
+                'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción detallada del proyecto'),
+                'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de aplicación (universidad restringida o abierta)'),
+                'objectives': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Items(type=openapi.TYPE_STRING),
+                    description='Lista de objetivos del proyecto'
+                ),
+                'necessary_requirements': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Items(type=openapi.TYPE_STRING),
+                    description='Lista de requisitos necesarios para el proyecto'
+                ),
+                'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Porcentaje de progreso del proyecto'),
+                'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Indica si el proyecto acepta solicitudes'),
+                'name_uniuser': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre de la universidad del usuario responsable'),
             },
-            required=['project_id']  # El ID del proyecto es obligatorio
+            required=['project_id']
         ),
         responses={
-            status.HTTP_200_OK: openapi.Response('Proyecto actualizado correctamente'),
+            status.HTTP_200_OK: openapi.Response(
+                'Proyecto actualizado correctamente',
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto actualizado'),
+                        'name': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del proyecto'),
+                        'description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción del proyecto'),
+                        'start_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de inicio'),
+                        'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE, description='Fecha de finalización'),
+                        'status': openapi.Schema(type=openapi.TYPE_STRING, description='Estado del proyecto'),
+                        'project_type': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de proyecto'),
+                        'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Prioridad del proyecto'),
+                        'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario responsable'),
+                        'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción detallada'),
+                        'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de aplicación'),
+                        'objectives': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Items(type=openapi.TYPE_STRING),
+                            description='Lista de objetivos'
+                        ),
+                        'necessary_requirements': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Items(type=openapi.TYPE_STRING),
+                            description='Lista de requisitos necesarios'
+                        ),
+                        'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Porcentaje de progreso del proyecto'),
+                        'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Indica si se aceptan solicitudes'),
+                        'name_uniuser': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre de la universidad asociada al usuario responsable'),
+                    },
+                ),
+            ),
             status.HTTP_404_NOT_FOUND: openapi.Response('Proyecto no encontrado'),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Datos inválidos'),
         },
-        tags=["Project Management"]
+        tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['PUT'], url_path='update-project', permission_classes=[IsAuthenticated])
     def update_project(self, request):
@@ -687,7 +777,7 @@ class PublicacionViewSet(ViewSet):
                 # Crear la notificación para el propietario del proyecto
                 notification_data = {
                     'sender': user.id,  
-                    'message': f"{user.first_name} {user.last_name} aplico al proyecto",
+                    'message': f"{user.first_name} {user.last_name} aplico al proyecto '{project.name}' ",
                     'is_read': 0,
                     'created_at': timezone.now(),
                     'user_id': lider_id
@@ -832,7 +922,7 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_200_OK: openapi.Response('Lista de notificaciones obtenida exitosamente'),
             status.HTTP_401_UNAUTHORIZED: openapi.Response('Usuario no autorizado'),
         },
-        tags=["Notificacions Project Management"]
+        tags=["Notificacions  Management"]
     )
     @action(detail=False, methods=['GET'], url_path='GetNotifications', permission_classes=[IsAuthenticated])
     def GetNotifications(self, request):
@@ -851,6 +941,26 @@ class PublicacionViewSet(ViewSet):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+    @swagger_auto_schema(
+        operation_description="Retrieve all applications (solicitudes) submitted by the logged-in user.",
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                'User applications retrieved successfully',
+                openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Items(type=openapi.TYPE_OBJECT, description="List of applications for the user.", properties={
+                        'id_solicitud': openapi.Schema(type=openapi.TYPE_INTEGER, description='Solicitud ID'),
+                        'id_project': openapi.Schema(type=openapi.TYPE_INTEGER, description='Project ID'),
+                        'status': openapi.Schema(type=openapi.TYPE_STRING, description='Current status of the application'),
+                        # Agrega otros campos relevantes aquí
+                    })
+                )
+            ),
+            status.HTTP_404_NOT_FOUND: openapi.Response('No applications found for this user'),
+            status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response('Internal server error')
+        },
+        tags=["Notificacions Management"]
+    )
     @action(detail=False, methods=['GET'], url_path='solicitudes_user', permission_classes=[IsAuthenticated])
     def get_solicitudes_user(self, request):
         user = request.user.id  
@@ -870,6 +980,29 @@ class PublicacionViewSet(ViewSet):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
+    @swagger_auto_schema(
+    operation_description="Retrieve all applications (solicitudes) for a specific project.",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['project_id'],
+        properties={
+            'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description="ID of the project")
+        }
+    ),
+    responses={
+        status.HTTP_200_OK: openapi.Response(
+            'Project applications retrieved successfully',
+            openapi.Schema(
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Items(type=openapi.TYPE_OBJECT, description="List of applications for the project.")
+            )
+        ),
+        status.HTTP_400_BAD_REQUEST: openapi.Response('project_id is required'),
+        status.HTTP_404_NOT_FOUND: openapi.Response('Project not found'),
+        status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response('Internal server error')
+    },
+    tags=["Notificacions  Management"]
+    )        
     @action(detail=False, methods=['POST'], url_path='solicitudes_project',permission_classes=[IsAuthenticated])
     def get_solicitudes_project(self, request):
         project_id = request.data.get('project_id')
@@ -925,7 +1058,7 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_200_OK: openapi.Response('Lista de proyectos creados por el usuario'),
             status.HTTP_404_NOT_FOUND: openapi.Response('No se encontraron proyectos'),
         },
-        tags=["Project Management"]
+        tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['GET'], url_path='my-projects', permission_classes=[IsAuthenticated])
     def view_project_usercreator(self, request):
@@ -982,7 +1115,7 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_200_OK: openapi.Response('Proyecto encontrado'),
             status.HTTP_404_NOT_FOUND: openapi.Response('Proyecto no encontrado'),
         },
-        tags=["Project Management"]
+        tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['POST'], url_path='get-project-id', permission_classes=[IsAuthenticated])
     def get_project_id(self, request):
@@ -1006,12 +1139,17 @@ class PublicacionViewSet(ViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
         
     @swagger_auto_schema(
-        operation_description="Obtener proyectos en los que el usuario está colaborando",
+        method='get',
+        operation_summary="Retrieve Collaborated Projects",
+        operation_description="Retrieve the list of projects the authenticated user has collaborated on.",
         responses={
-            status.HTTP_200_OK: openapi.Response('Lista de proyectos en los que el usuario colabora'),
-            status.HTTP_404_NOT_FOUND: openapi.Response('No se encontraron proyectos'),
+            200: openapi.Response(
+                description="Successful response with list of projects.",
+                schema=ProjectSerializer(many=True)
+            ),
+            404: openapi.Response(description="No projects found for the collaborations.")
         },
-        tags=["Project Management"]
+        tags=["Collab Management"]
     )
     @action(detail=False, methods=['GET'], url_path='my-collaborated-projects', permission_classes=[IsAuthenticated])
     def view_project_usercollab(self, request):
@@ -1055,6 +1193,26 @@ class PublicacionViewSet(ViewSet):
         else:
             return Response({"message": "No se encontraron proyectos en los que colabora."}, status=status.HTTP_404_NOT_FOUND)
 
+    @swagger_auto_schema(
+        method='delete',
+        operation_summary="Delete Collaborator",
+        operation_description="Delete a collaborator from a project.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description="ID of the project"),
+                'user_id': openapi.Schema(type=openapi.TYPE_INTEGER, description="ID of the user to remove from project")
+            },
+            required=['project_id', 'user_id']
+        ),
+        responses={
+            204: openapi.Response(description="Collaborator deleted successfully"),
+            400: openapi.Response(description="Both project_id and user_id are required"),
+            404: openapi.Response(description="Project/User/Collaboration not found"),
+            500: openapi.Response(description="Internal server error")
+        },
+        tags=["Collab Management"]
+    )
     @action(detail=False, methods=['DELETE'], url_path='delete_collaborator', permission_classes=[IsAuthenticated])
     def delete_collaborator(self, request):
         project_id = request.data.get('project_id')
@@ -1064,22 +1222,39 @@ class PublicacionViewSet(ViewSet):
             return Response({"error": "Both project_id and user_id are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Verificar que el proyecto existe
+            # Verificar que el proyecto y el usuario existen
             project = Projects.objects.get(id=project_id)
-
-            # Verificar que el usuario existe
             user = Users.objects.get(id=user_id)
 
             # Verificar que la colaboración existe
             collaboration = Collaborations.objects.filter(project=project, user=user).first()
-
             if not collaboration:
                 return Response({"error": "Collaboration not found"}, status=status.HTTP_404_NOT_FOUND)
 
             # Eliminar la colaboración
             collaboration.delete()
 
-            return Response({"message": "Collaborator deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+            # Eliminar la solicitud asociada al proyecto y usuario
+            solicitud = Solicitudes.objects.filter(id_project=project, id_user=user).first()
+            if solicitud:
+                solicitud.delete()
+
+            # Crear la notificación para el usuario eliminado
+            notification_data = {
+                'sender': request.user.id,  # Usuario autenticado (quien realiza la eliminación)
+                'message': f"Has sido eliminado como colaborador del proyecto '{project.name}'.",
+                'is_read': 0,
+                'created_at': timezone.now().strftime('%Y-%m-%d'),
+                'user_id': user.id  # Usuario eliminado del proyecto
+            }
+            notification_serializer = NotificationSerializer(data=notification_data)
+            
+            if notification_serializer.is_valid():
+                notification_serializer.save()
+            else:
+                return Response(notification_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            return Response({"message": "Collaborator deleted and notified successfully"}, status=status.HTTP_204_NO_CONTENT)
 
         except Projects.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -1126,7 +1301,7 @@ class FormsViewSet(ViewSet):
         # Datos del formulario
         form_data = {
             **request.data,
-            'created_at': timezone.now(),  # Fecha de creación
+            'created_at': timezone.now().strftime('%Y-%m-%d'),  # Fecha de creación
             'user': user_id,  # Asigna el usuario autenticado como creador del formulario
         }
 
