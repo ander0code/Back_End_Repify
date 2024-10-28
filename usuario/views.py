@@ -307,13 +307,13 @@ class PerfilViewSet(ViewSet):
         tags = ["Profile Management"]
     )
     @action(detail=False, methods=['POST'], url_path='profile', permission_classes=[IsAuthenticated])
-    async def profile_data(self, request):
+    def profile_data(self, request):
         # Obtener la instancia del usuario autenticado
         user_id = request.user.id
 
         # Filtrar el perfil del usuario desde la tabla Users
         try:
-            user_profile = await sync_to_async(Users.objects.get)(authuser_id=user_id)
+            user_profile = Users.objects.get(authuser_id=user_id)
         except Users.DoesNotExist:
             return Response({"error": "User profile not found"}, status=404)
 
