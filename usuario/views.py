@@ -665,6 +665,27 @@ class PublicacionViewSet(ViewSet):
         serializer = ProjectSerializerAll(projects, many=True)
         
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @swagger_auto_schema(
+        operation_description="Retrieve the 3 most recent projects in descending order by start date",
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="List of the 3 most recent projects",
+                schema=ProjectSerializerAll(many=True)
+            ),
+            status.HTTP_400_BAD_REQUEST: "Invalid request",
+        },
+        tags=["CRUD Project Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='view_recent_projects', permission_classes=[IsAuthenticated])
+    def view_recent_projects(self, request):
+        # Obtener los 3 proyectos más recientes ordenados por id en orden descendente
+        recent_projects = Projects.objects.all().order_by('-id')[:3]
+        
+        # Serializar los proyectos
+        serializer = ProjectSerializerAll(recent_projects, many=True)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
         
     #Postulaziones    
         
@@ -1057,6 +1078,31 @@ class PublicacionViewSet(ViewSet):
             return Response({"message": "No se encontraron proyectos"}, status=status.HTTP_404_NOT_FOUND)
     
     @swagger_auto_schema(
+        operation_description="Obtener el proyecto más reciente creado por el usuario autenticado",
+        responses={
+            status.HTTP_200_OK: openapi.Response('Proyecto más reciente creado por el usuario'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('No se encontraron proyectos'),
+        },
+        tags=["Project Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='my-latest-project', permission_classes=[IsAuthenticated])
+    def view_latest_project_usercreator(self, request):
+        # Obtener la instancia del modelo Users asociada al usuario autenticado
+        try:
+            user_instance = request.user.id  # Ajusta esto si tu relación es diferente
+        except Users.DoesNotExist:
+            return Response({"message": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Filtrar el proyecto más reciente creado por el usuario, ordenado por id
+        latest_project = Projects.objects.filter(responsible=user_instance).order_by('-id').first()
+
+        if latest_project:
+            serializer = ProjectSerializer(latest_project)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "No se encontraron proyectos"}, status=status.HTTP_404_NOT_FOUND)
+    
+    @swagger_auto_schema(
         operation_description="Obtener un proyecto específico pasando el ID del proyecto en el cuerpo de la solicitud",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
@@ -1115,6 +1161,31 @@ class PublicacionViewSet(ViewSet):
 
         # Obtener los proyectos relacionados a las colaboraciones
         projects = Projects.objects.filter(id__in=collaborations.values_list('project', flat=True))
+
+        if projects.exists():
+            serializer = ProjectSerializer(projects, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "No se encontraron proyectos en los que colabora."}, status=status.HTTP_404_NOT_FOUND)
+        
+    @swagger_auto_schema(
+        operation_description="Obtener los dos proyectos más recientes en los que el usuario está colaborando",
+        responses={
+            status.HTTP_200_OK: openapi.Response('Lista de los dos proyectos más recientes en los que el usuario colabora'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('No se encontraron proyectos'),
+        },
+        tags=["Project Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='my-latest-two-collaborated-projects', permission_classes=[IsAuthenticated])
+    def view_latest_two_collaborated_projects(self, request):
+        # Obtener la instancia del usuario autenticado
+        user_instance = request.user.id  # Ajusta esto si tu relación es diferente
+
+        # Filtrar colaboraciones del usuario
+        collaborations = Collaborations.objects.filter(user=user_instance)
+
+        # Obtener los proyectos relacionados a las colaboraciones, limitados a los dos más recientes
+        projects = Projects.objects.filter(id__in=collaborations.values_list('project', flat=True)).order_by('-id')[:2]
 
         if projects.exists():
             serializer = ProjectSerializer(projects, many=True)
