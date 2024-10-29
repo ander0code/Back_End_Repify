@@ -106,8 +106,7 @@ class ProjectSerializerCreate(adrf.serializers.ModelSerializer):
             'id': {'read_only': True},
         }
 
-
-class ProjectSerializerAll(adrf.serializers.ModelSerializer):
+class ProjectSerializerAll(serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField()
     collaboration_count = serializers.SerializerMethodField()
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
@@ -136,20 +135,7 @@ class ProjectSerializerAll(adrf.serializers.ModelSerializer):
             'id': {'read_only': True},
         }
 
-    # async def get_creator_name(self, obj):
-    #     if obj.responsible:
-    #         # Realiza la consulta de manera síncrona
-    #         authuser = await sync_to_async(list)(Users.objects.filter(id=obj.responsible.id).first())
-    #         if authuser:
-    #             return f"{authuser.first_name} {authuser.last_name}"
-    #     return None
-
-    # async def get_collaboration_count(self, obj):
-    #     # Obtiene el conteo de colaboraciones de manera síncrona
-    #     count = await sync_to_async(list)(Collaborations.objects.filter(project=obj).count())
-    #     return count
-    
-class ProjectSerializerID(adrf.serializers.ModelSerializer):
+class ProjectSerializerID(serializers.ModelSerializer):
     
     creator_name = serializers.SerializerMethodField() 
     collaboration_count = serializers.SerializerMethodField()  
@@ -184,8 +170,6 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
         extra_kwargs = {
             'id': {'read_only': True},
         }
-
-
 
 class SolicitudSerializer(adrf.serializers.ModelSerializer):
     
@@ -241,23 +225,6 @@ class ProjectSerializer(adrf.serializers.ModelSerializer):
             'collaborators'
         ]
     
-    def get_name_responsible(self, obj):
-        
-        return f"{obj.responsible.authuser.first_name} {obj.responsible.authuser.last_name}"
-    
-    def get_collaboration_count(self, obj):
-        return Collaborations.objects.filter(project=obj).count()
-
-    def get_collaborators(self, obj):
-        collaborators = Collaborations.objects.filter(project=obj).select_related('user__authuser')
-        return [
-            {
-                "id": collab.user.id,
-                "name": f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
-            }
-            for collab in collaborators if collab.user and collab.user.authuser
-        ]
-        
 class ProjectUpdateSerializer(adrf.serializers.ModelSerializer):
     objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)

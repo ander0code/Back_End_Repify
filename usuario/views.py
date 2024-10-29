@@ -76,6 +76,11 @@ class LoginViewSet(ViewSet):
                 'achievements': openapi.Schema(type=openapi.TYPE_STRING, description='Achievements of the user'),
                 'first_name': openapi.Schema(type=openapi.TYPE_STRING, description='First name of the user'),
                 'last_name': openapi.Schema(type=openapi.TYPE_STRING, description='Last name of the user'),
+                'interests': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Items(type=openapi.TYPE_STRING, maxLength=500),
+                    description='List of interests of the user (optional)'
+                ),
             },
         ),
         responses={
@@ -87,15 +92,19 @@ class LoginViewSet(ViewSet):
                         'refresh': openapi.Schema(type=openapi.TYPE_STRING, description='Refresh token'),
                         'access': openapi.Schema(type=openapi.TYPE_STRING, description='Access token'),
                         'user': openapi.Schema(type=openapi.TYPE_OBJECT, description='User data', properties={
-                            'email': openapi.Schema(type=openapi.TYPE_STRING, description='Email of the user'),
+                            'authuser': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the associated auth user'),
                             'university': openapi.Schema(type=openapi.TYPE_STRING, description='University of the user'),
                             'career': openapi.Schema(type=openapi.TYPE_STRING, description='Career of the user'),
                             'cycle': openapi.Schema(type=openapi.TYPE_STRING, description='Cycle of the user'),
+                            'interests': openapi.Schema(
+                                type=openapi.TYPE_ARRAY,
+                                items=openapi.Items(type=openapi.TYPE_STRING, maxLength=500),
+                                description='List of interests of the user'
+                            ),
                             'biography': openapi.Schema(type=openapi.TYPE_STRING, description='Biography of the user'),
                             'photo': openapi.Schema(type=openapi.TYPE_STRING, description='Photo URL of the user'),
                             'achievements': openapi.Schema(type=openapi.TYPE_STRING, description='Achievements of the user'),
-                            'first_name': openapi.Schema(type=openapi.TYPE_STRING, description='First name of the user'),
-                            'last_name': openapi.Schema(type=openapi.TYPE_STRING, description='Last name of the user'),
+                            'created_at': openapi.Schema(type=openapi.TYPE_STRING, description='Creation date of the user record', format='date'),
                         }),
                     },
                 ),
@@ -968,19 +977,19 @@ class PublicacionViewSet(ViewSet):
     async def AcceptProject(self, request):
         id_solicitud = request.data.get('id_solicitud')
         user = request.user
-
         try:
-            solicitud = await sync_to_async(Solicitudes.objects.get)(id_solicitud=id_solicitud)
-            
-            # Verificar si el usuario es el responsable del proyecto
-            if solicitud.id_project.responsible.id != user.id:
-                return Response({"error": "No tienes permiso para aceptar esta solicitud"}, status=status.HTTP_403_FORBIDDEN)
+            solicitud = await sync_to_async(Solicitudes.objects.select_related('id_project', 'id_user').get)(id_solicitud=id_solicitud)
 
-            # Cambiar el estado de la solicitud a 'Aceptada'
+            project_responsible_id = solicitud.id_project
+
+            project_responsible_user_id = await sync_to_async(lambda: project_responsible_id.responsible)()
+
+            if project_responsible_user_id.id != user.id:
+                return Response({"error": "No tienes permiso para aceptar esta solicitud"}, status=status.HTTP_403_FORBIDDEN)
+            
             solicitud.status = 'Aceptada'
             await sync_to_async(solicitud.save)()
 
-            # Crear una colaboración
             collaboration_data = {
                 'user': solicitud.id_user.id,
                 'project': solicitud.id_project.id,
@@ -1032,14 +1041,16 @@ class PublicacionViewSet(ViewSet):
     async def Denyproject(self, request):
         solicitud_id = request.data.get('solicitud_id')
         user = request.user
-
         try:
-            solicitud = await sync_to_async(Solicitudes.objects.get)(id_solicitud=solicitud_id)
-            
-            # Verificar si el usuario es el responsable del proyecto
-            if solicitud.id_project.responsible.id != user.id:
-                return Response({"error": "No tienes permiso para negar esta solicitud"}, status=status.HTTP_403_FORBIDDEN)
+            solicitud = await sync_to_async(Solicitudes.objects.select_related('id_project', 'id_user').get)(id_solicitud=solicitud_id)
 
+            project_responsible_id = solicitud.id_project
+
+            project_responsible_user_id = await sync_to_async(lambda: project_responsible_id.responsible)()
+
+            if project_responsible_user_id.id != user.id:
+                return Response({"error": "No tienes permiso para aceptar esta solicitud"}, status=status.HTTP_403_FORBIDDEN)
+            
             # Cambiar el estado de la solicitud a 'Negada'
             solicitud.status = 'Rechazado'
             await sync_to_async(solicitud.save)()
@@ -1114,19 +1125,19 @@ class PublicacionViewSet(ViewSet):
         user = request.user.id  
         
         try:
-            # Filtrar todas las solicitudes hechas por el usuario autenticado
-            solicitudes = Solicitudes.objects.filter(id_user=user).order_by("-id_solicitud")
+                # Filtrar todas las solicitudes hechas por el usuario autenticado
+                solicitudes = await sync_to_async(list)(Solicitudes.objects.filter(id_user=user).order_by("-id_solicitud"))
 
-            # Verificar si el usuario tiene solicitudes
-            if not solicitudes.exists():
-                return Response({"message": "No solicitudes found for this user"}, status=status.HTTP_404_NOT_FOUND)
+                # Verificar si el usuario tiene solicitudes
+                if not solicitudes:
+                    return Response({"message": "No solicitudes found for this user"}, status=status.HTTP_404_NOT_FOUND)
 
-            # Serializar las solicitudes
-            serializer = SolicitudSerializer(solicitudes, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+                # Serializar las solicitudes
+                serializer = await sync_to_async(SolicitudSerializer)(solicitudes, many=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
 
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
     @swagger_auto_schema(
     operation_description="Retrieve all applications (solicitudes) for a specific project.",
@@ -1151,7 +1162,7 @@ class PublicacionViewSet(ViewSet):
     },
     tags=["Notificacions  Management"]
     )        
-    @action(detail=False, methods=['POST'], url_path='solicitudes_project',permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['POST'], url_path='solicitudes_project', permission_classes=[IsAuthenticated])
     async def get_solicitudes_project(self, request):
         project_id = request.data.get('project_id')
 
@@ -1160,17 +1171,20 @@ class PublicacionViewSet(ViewSet):
 
         try:
             # Verificar si el proyecto existe
-            project = Projects.objects.get(id=project_id)
+            project = await sync_to_async(Projects.objects.get)(id=project_id)
             
             # Filtrar solicitudes por proyecto
-            solicitudes = Solicitudes.objects.filter(id_project=project).order_by("-id_solicitud")
+            solicitudes = await sync_to_async(list)(Solicitudes.objects.filter(id_project=project).order_by("-id_solicitud"))
             
             # Serializar las solicitudes
-            serializer = SolicitudSerializer(solicitudes, many=True)
+            serializer = await sync_to_async(SolicitudSerializer)(solicitudes, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         except Projects.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
     @action(detail=False, methods=['DELETE'], url_path='delete_solicitud', permission_classes=[IsAuthenticated])
     async def delete_solicitud(self, request):
@@ -1182,12 +1196,12 @@ class PublicacionViewSet(ViewSet):
 
         try:
             # Verificar si la solicitud existe y pertenece al usuario autenticado
-            solicitud = Solicitudes.objects.get(id_solicitud=solicitud_id, id_user=user)
+            solicitud = await sync_to_async(Solicitudes.objects.get)(id_solicitud=solicitud_id, id_user=user)
 
             # Verificar si la solicitud ha sido rechazada o no
-            if solicitud.status == 'Rechazado' or solicitud.status == 'Pendiente':
+            if solicitud.status in ['Rechazado', 'Pendiente']:
                 # Si la solicitud está pendiente o ha sido rechazada, se permite eliminarla
-                solicitud.delete()
+                await sync_to_async(solicitud.delete)()
                 return Response({"message": "Solicitud deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
             else:
                 return Response({"error": "Cannot delete a solicitud that has been accepted or is in another status"}, status=status.HTTP_400_BAD_REQUEST)
@@ -1210,21 +1224,49 @@ class PublicacionViewSet(ViewSet):
     )
     @action(detail=False, methods=['GET'], url_path='my-projects', permission_classes=[IsAuthenticated])
     async def view_project_usercreator(self, request):
-        # Obtener la instancia del modelo Users asociada al usuario autenticado
-        try:
-            user_instance = request.user.id  # Ajusta esto si tu relación es diferente
-        except Users.DoesNotExist:
-            return Response({"message": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+        user_id = request.user.id  
 
-        # Filtrar proyectos creados por el usuario
-        projects = Projects.objects.filter(responsible=user_instance)
+        projects = await sync_to_async(list)(Projects.objects.filter(responsible=user_id))
 
-        if projects.exists():
-            serializer = ProjectSerializer(projects, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        if projects:
+            response_data = []
+            for project in projects:
+                collaboratorsall = await sync_to_async(list)(Collaborations.objects.filter(project=project).select_related('user__authuser'))
+                
+                collaborators_info = await self.get_collaborators_info_proyect(collaboratorsall)
+
+                name_responsible = await self.get_responsible_name_proyect(project)
+
+                collaboration_count = await self.get_collaboration_count_proyect(project)
+
+                project_data = {
+                    'id': project.id,
+                    'name': project.name,
+                    'description': project.description,
+                    'start_date': project.start_date,
+                    'end_date': project.end_date,
+                    'status': project.status,
+                    'project_type': project.project_type,
+                    'priority': project.priority,
+                    'responsible': project.responsible_id,  
+                    'name_responsible': name_responsible,
+                    'detailed_description': project.detailed_description,
+                    'type_aplyuni': project.type_aplyuni,
+                    'objectives': project.objectives,
+                    'necessary_requirements': project.necessary_requirements,
+                    'progress': project.progress,
+                    'accepting_applications': project.accepting_applications,
+                    'name_uniuser': project.name_uniuser,
+                    'collaboration_count': collaboration_count,
+                    'collaborators': collaborators_info,
+                }
+                response_data.append(project_data)
+
+            return Response(response_data, status=status.HTTP_200_OK)
         else:
             return Response({"message": "No se encontraron proyectos"}, status=status.HTTP_404_NOT_FOUND)
-    
+
+    #PARA LA CONFIGURACION DEL PROYECTO
     @swagger_auto_schema(
         operation_description="Obtener un proyecto específico pasando el ID del proyecto en el cuerpo de la solicitud",
         request_body=openapi.Schema(
@@ -1246,20 +1288,42 @@ class PublicacionViewSet(ViewSet):
         if not project_id:
             return Response({"message": "ID del proyecto es requerido."}, status=status.HTTP_400_BAD_REQUEST)
 
-        user_instance = request.user.id
-
-        # Verificar el ID del usuario responsable
-        project = Projects.objects.filter(id=project_id).first()
+        projects = await sync_to_async(Projects.objects.filter(id=project_id).first)()
         
-        if project is None:
-            return Response({"message": "Proyecto no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+        if projects:
 
-        if project.responsible.id != user_instance:
-            return Response({"message": "El usuario no es responsable del proyecto."}, status=status.HTTP_403_FORBIDDEN)
+                collaboratorsall = await sync_to_async(list)(Collaborations.objects.filter(project=projects).select_related('user__authuser'))
+                collaborators_info = await self.get_collaborators_info_proyect(collaboratorsall)
 
-        serializer = ProjectSerializer(project)
-        
-        return Response(serializer.data, status=status.HTTP_200_OK)
+                name_responsible = await self.get_responsible_name_proyect(projects)
+
+                collaboration_count = await self.get_collaboration_count(projects)
+
+                project_data = {
+                    'id': projects.id,
+                    'name': projects.name,
+                    'description': projects.description,
+                    'start_date': projects.start_date,
+                    'end_date': projects.end_date,
+                    'status': projects.status,
+                    'project_type': projects.project_type,
+                    'priority': projects.priority,
+                    'responsible': projects.responsible_id,  
+                    'name_responsible': name_responsible,
+                    'detailed_description': projects.detailed_description,
+                    'type_aplyuni': projects.type_aplyuni,
+                    'objectives': projects.objectives,
+                    'necessary_requirements': projects.necessary_requirements,
+                    'progress': projects.progress,
+                    'accepting_applications': projects.accepting_applications,
+                    'name_uniuser': projects.name_uniuser,
+                    'collaboration_count': collaboration_count,
+                    'collaborators': collaborators_info,
+                }
+
+                return Response(project_data, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "No se encontraron proyectos"}, status=status.HTTP_404_NOT_FOUND)
         
     @swagger_auto_schema(
         method='get',
@@ -1279,18 +1343,78 @@ class PublicacionViewSet(ViewSet):
         # Obtener la instancia del usuario autenticado
         user_instance = request.user.id  # Ajusta esto si tu relación es diferente
 
-        # Filtrar colaboraciones del usuario
-        collaborations = Collaborations.objects.filter(user=user_instance)
+        # Filtrar colaboraciones del usuario de forma asíncrona
+        collaborations = await sync_to_async(list)(Collaborations.objects.filter(user=user_instance))
 
-        # Obtener los proyectos relacionados a las colaboraciones
-        projects = Projects.objects.filter(id__in=collaborations.values_list('project', flat=True))
+        # Obtener los proyectos relacionados a las colaboraciones de forma asíncrona
+        if collaborations:
+            
+            project_ids = await sync_to_async(lambda: [collab.project_id for collab in collaborations])()
+            projects = await sync_to_async(list)(Projects.objects.filter(id__in=project_ids))
 
-        if projects.exists():
-            serializer = ProjectSerializer(projects, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            if projects:
+    
+                response_data = []
+                for project in projects:
+                    collaboratorsall = await sync_to_async(list)(Collaborations.objects.filter(project=project).select_related('user__authuser'))
+                    
+                    collaborators_info = await self.get_collaborators_info_proyect(collaboratorsall)
+
+                    name_responsible = await self.get_responsible_name_proyect(project)
+
+                    collaboration_count = await self.get_collaboration_count_proyect(project)
+
+                    project_data = {
+                        'id': project.id,
+                        'name': project.name,
+                        'description': project.description,
+                        'start_date': project.start_date,
+                        'end_date': project.end_date,
+                        'status': project.status,
+                        'project_type': project.project_type,
+                        'priority': project.priority,
+                        'responsible': project.responsible_id,  
+                        'name_responsible': name_responsible,
+                        'detailed_description': project.detailed_description,
+                        'type_aplyuni': project.type_aplyuni,
+                        'objectives': project.objectives,
+                        'necessary_requirements': project.necessary_requirements,
+                        'progress': project.progress,
+                        'accepting_applications': project.accepting_applications,
+                        'name_uniuser': project.name_uniuser,
+                        'collaboration_count': collaboration_count,
+                        'collaborators': collaborators_info,
+                    }
+                    response_data.append(project_data)
+
+                return Response(response_data, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "No se encontraron proyectos"}, status=status.HTTP_404_NOT_FOUND)
+
         else:
-            return Response({"message": "No se encontraron proyectos en los que colabora."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"message": "No se encontraron colaboraciones."}, status=status.HTTP_404_NOT_FOUND)
+        
+    async def get_collaboration_count_proyect(self, project):
+        return await sync_to_async(lambda: Collaborations.objects.filter(project=project).count())()
 
+    async def get_collaborators_info_proyect(self, collaborators):
+        collaborator_info = []
+        for collab in collaborators:
+            if collab.user and collab.user.authuser:
+                user_info = {
+                    "id": collab.user.id,
+                    "name": f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
+                }
+                collaborator_info.append(user_info)
+        return collaborator_info
+
+    async def get_responsible_name_proyect(self, obj):
+        
+        if obj.responsible_id: 
+            authuser = await sync_to_async(User.objects.get)(id=obj.responsible_id)
+            if authuser:
+                return f"{authuser.first_name} {authuser.last_name}"    
+             
     @swagger_auto_schema(
         method='delete',
         operation_summary="Delete Collaborator",
@@ -1321,21 +1445,23 @@ class PublicacionViewSet(ViewSet):
 
         try:
             # Verificar que el proyecto y el usuario existen
-            project = Projects.objects.get(id=project_id)
-            user = Users.objects.get(id=user_id)
+            project = await sync_to_async(Projects.objects.get)(id=project_id)
+            user = await sync_to_async(Users.objects.get)(id=user_id)
 
             # Verificar que la colaboración existe
-            collaboration = Collaborations.objects.filter(project=project, user=user).first()
-            if not collaboration:
+            collaboration = await sync_to_async(Collaborations.objects.filter)(project=project, user=user)
+            collaboration_instance = await sync_to_async(collaboration.first)()
+            if not collaboration_instance:
                 return Response({"error": "Collaboration not found"}, status=status.HTTP_404_NOT_FOUND)
 
             # Eliminar la colaboración
-            collaboration.delete()
+            await sync_to_async(collaboration_instance.delete)()
 
             # Eliminar la solicitud asociada al proyecto y usuario
-            solicitud = Solicitudes.objects.filter(id_project=project, id_user=user).first()
-            if solicitud:
-                solicitud.delete()
+            solicitud = await sync_to_async(Solicitudes.objects.filter)(id_project=project, id_user=user)
+            solicitud_instance = await sync_to_async(solicitud.first)()
+            if solicitud_instance:
+                await sync_to_async(solicitud_instance.delete)()
 
             # Crear la notificación para el usuario eliminado
             notification_data = {
@@ -1346,9 +1472,9 @@ class PublicacionViewSet(ViewSet):
                 'user_id': user.id  # Usuario eliminado del proyecto
             }
             notification_serializer = NotificationSerializer(data=notification_data)
-            
-            if notification_serializer.is_valid():
-                notification_serializer.save()
+
+            if await sync_to_async(notification_serializer.is_valid)():
+                await sync_to_async(notification_serializer.save)()
             else:
                 return Response(notification_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1406,9 +1532,9 @@ class FormsViewSet(ViewSet):
         # Serializa los datos
         form_serializer = FormSerializer(data=form_data)
 
-        # Guarda si los datos son válidos
-        if form_serializer.is_valid():
-            form_serializer.save()
+        # Verifica si los datos son válidos y guarda de manera asincrónica
+        if await sync_to_async(form_serializer.is_valid)():
+            await sync_to_async(form_serializer.save)()
             return Response(form_serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(form_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1441,14 +1567,21 @@ class FormsViewSet(ViewSet):
     )
     @action(detail=False, methods=['GET'], url_path='get_all_forms', permission_classes=[IsAuthenticated])
     async def get_all_forms(self, request):
-        forms = Forms.objects.all().order_by('-created_at') 
+        # Obtener todos los formularios de forma asincrónica
+        forms = await self.get_forms()
         data = []
-        
+
         for form in forms:
             form_data = FormSerializer(form).data
-            user = User.objects.get(id=form.user_id)
+            user = await self.get_user(form.user_id)
             form_data['first_name'] = user.first_name
             form_data['last_name'] = user.last_name
             data.append(form_data)
-        
+
         return Response(data, status=status.HTTP_200_OK)
+
+    async def get_forms(self):
+        return await sync_to_async(list)(Forms.objects.all().order_by('-created_at'))
+
+    async def get_user(self, user_id):
+        return await sync_to_async(User.objects.get)(id=user_id)
