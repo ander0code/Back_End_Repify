@@ -57,7 +57,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'adrf',
     'rest_framework',
-    'rest_framework.authtoken',  # required for serving swagger ui's css/js files
+    'rest_framework.authtoken',
     'drf_yasg',
     'usuario'
 ]
@@ -97,16 +97,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'repo.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-# DATABASES = {
-#     'default': dj_database_url.config(
-#         default=os.getenv('DATABASE_URL'),
-#         conn_max_age=600  # Opcional: controla el tiempo máximo de vida de la conexión a la base de datos
-#     )
-# }
-# Replace the SQLite DATABASES configuration with PostgreSQL:
 DATABASES = {
     'default': dj_database_url.config(
         default=os.getenv('DATABASE_URL'),
@@ -198,4 +188,20 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        '': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
 }

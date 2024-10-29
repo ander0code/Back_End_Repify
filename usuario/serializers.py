@@ -2,11 +2,12 @@ from django.contrib.auth import authenticate
 
 import adrf
 from adrf.serializers import Serializer
+from asgiref.sync import sync_to_async
 
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Users, Projects , Collaborations, Solicitudes, Notifications, Forms, Achievements, UserAchievements  # Asegúrate de tener bien definido tu modelo de Usuarios
 
-from .models import Users, Projects , Collaborations, Solicitudes  # Asegúrate de tener bien definido tu modelo de Usuarios
+from .models import Users, Projects , Collaborations, Solicitudes  
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -105,30 +106,11 @@ class ProjectSerializerCreate(adrf.serializers.ModelSerializer):
             'id': {'read_only': True},
         }
 
-    def get_creator_name(self, obj):
-        
-        if obj.responsible and obj.responsible.authuser:
-            return f"{obj.responsible.authuser.first_name} {obj.responsible.authuser.last_name}"
-        return None
-
-    def get_collaboration_count(self, obj):
-
-        return Collaborations.objects.filter(project=obj).count()
-
-    def get_collaborators(self, obj):
-       
-        collaborators = Collaborations.objects.filter(project=obj).select_related('user__authuser')
-        return [
-            f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
-            for collab in collaborators if collab.user and collab.user.authuser
-        ]
-
-class ProjectSerializerAll(adrf.serializers.ModelSerializer):
-    creator_name = serializers.SerializerMethodField() 
-    collaboration_count = serializers.SerializerMethodField() 
+class ProjectSerializerAll(serializers.ModelSerializer):
+    creator_name = serializers.SerializerMethodField()
+    collaboration_count = serializers.SerializerMethodField()
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
-    
-    
+
     class Meta:
         model = Projects
         fields = [
@@ -146,24 +128,15 @@ class ProjectSerializerAll(adrf.serializers.ModelSerializer):
             'progress',
             'accepting_applications',
             'type_aplyuni',
-            'creator_name',  
+            'creator_name',
             'collaboration_count'
         ]
         extra_kwargs = {
             'id': {'read_only': True},
         }
 
-    def get_creator_name(self, obj):
-        
-        if obj.responsible and obj.responsible.authuser:
-            return f"{obj.responsible.authuser.first_name} {obj.responsible.authuser.last_name}"
-        return None
-
-    def get_collaboration_count(self, obj):
-        
-        return Collaborations.objects.filter(project=obj).count()
+class ProjectSerializerID(serializers.ModelSerializer):
     
-class ProjectSerializerID(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField() 
     collaboration_count = serializers.SerializerMethodField()  
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
@@ -198,34 +171,6 @@ class ProjectSerializerID(adrf.serializers.ModelSerializer):
             'id': {'read_only': True},
         }
 
-    def get_creator_name(self, obj):
-        
-        if obj.responsible and obj.responsible.authuser:
-            return f"{obj.responsible.authuser.first_name} {obj.responsible.authuser.last_name}"
-        return None
-
-    def get_collaboration_count(self, obj):
-       
-        return Collaborations.objects.filter(project=obj).count()
-
-    def get_collaborators(self, obj):
-        
-        collaborators = Collaborations.objects.filter(project=obj).select_related('user__authuser')
-        return [
-            f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
-            for collab in collaborators if collab.user and collab.user.authuser
-        ]
-    def get_has_applied(self, obj):
-        # Obtener el usuario autenticado desde el contexto
-        user = self.context['request'].user.id 
-
-        # Verificar si el usuario es el responsable del proyecto
-        if obj.responsible and obj.responsible.authuser and obj.responsible.authuser.id == user:
-            return True
-
-        # Si no es el responsable, verificar si el usuario ha aplicado al proyecto
-        return Solicitudes.objects.filter(id_user=user, id_project=obj).exists()
-
 class SolicitudSerializer(adrf.serializers.ModelSerializer):
     
     created_at = serializers.DateTimeField(format="%Y-%m-%d")
@@ -247,7 +192,7 @@ class NotificationSerializer(adrf.serializers.ModelSerializer):
 class NotificationSerializerMS(adrf.serializers.ModelSerializer):
     class Meta:
         model = Notifications
-        fields = ['id','message'] 
+        fields = ['id','message','is_read'] 
         
 class ProjectSerializer(adrf.serializers.ModelSerializer):
     objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
@@ -280,23 +225,6 @@ class ProjectSerializer(adrf.serializers.ModelSerializer):
             'collaborators'
         ]
     
-    def get_name_responsible(self, obj):
-        
-        return f"{obj.responsible.authuser.first_name} {obj.responsible.authuser.last_name}"
-    
-    def get_collaboration_count(self, obj):
-        return Collaborations.objects.filter(project=obj).count()
-
-    def get_collaborators(self, obj):
-        collaborators = Collaborations.objects.filter(project=obj).select_related('user__authuser')
-        return [
-            {
-                "id": collab.user.id,
-                "name": f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
-            }
-            for collab in collaborators if collab.user and collab.user.authuser
-        ]
-        
 class ProjectUpdateSerializer(adrf.serializers.ModelSerializer):
     objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
@@ -322,10 +250,11 @@ class ProjectUpdateSerializer(adrf.serializers.ModelSerializer):
         ]
         
 class ProfileSerializer(adrf.serializers.ModelSerializer):
-    email = serializers.EmailField(source='authuser.email', read_only=True)
-    first_name = serializers.CharField(source='authuser.first_name', read_only=True)
-    last_name = serializers.CharField(source='authuser.last_name', read_only=True)
-    date_joined = serializers.DateTimeField(source='authuser.date_joined', read_only=True)
+    # Campos de `authuser`
+    email = serializers.EmailField(read_only=True)
+    first_name = serializers.CharField(read_only=True)
+    last_name = serializers.CharField(read_only=True)
+    date_joined = serializers.DateTimeField(read_only=True)
     interests = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
 
     class Meta:
@@ -333,7 +262,7 @@ class ProfileSerializer(adrf.serializers.ModelSerializer):
         fields = ['university', 'career', 'cycle', 'biography','interests','photo', 'achievements', 'created_at', 
                   'email', 'first_name', 'last_name', 'date_joined']
 
-class FormSerializer(serializers.ModelSerializer):
+class FormSerializer(adrf.serializers.ModelSerializer):
 
     created_at =  serializers.DateTimeField(format="%Y-%m-%d") 
     class Meta:
