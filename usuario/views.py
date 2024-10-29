@@ -13,6 +13,8 @@ from django.shortcuts import get_object_or_404
 from usuario.models import Users,Projects,Solicitudes,Collaborations, Notifications, Forms
 from rest_framework.permissions import AllowAny ,IsAuthenticated
 import random
+import logging
+logger = logging.getLogger('your_app_name')  # Cambia esto por el nombre de tu aplicación
 
 from asgiref.sync import sync_to_async
 
@@ -482,27 +484,90 @@ class PublicacionViewSet(ViewSet):
     )
     @action(detail=False, methods=['POST'], url_path='create_proyect', permission_classes=[IsAuthenticated])
     async def create_project(self, request):
-        
         responsible_user_id = request.user.id
-        
-        custom_user = await sync_to_async(Users.objects.get)(authuser=responsible_user_id)
-        
-        # Rellenar automáticamente el campo 'responsible' con el ID del usuario autenticado
-        project_data = {
-            **request.data,
-            'start_date': timezone.now().strftime('%Y-%m-%d'),  # Fecha de creación
-            'name_uniuser': custom_user.university if custom_user.university else "",
-            'responsible': responsible_user_id  # Asigna el usuario autenticado como responsable
-        }
-    
-        # Serializa los datos
+        logger.debug("Creating project for user ID: %s", responsible_user_id)
+
+        # Obtener el perfil del usuario de manera asíncrona
+        try:
+            custom_user = await sync_to_async(Users.objects.get)(authuser=responsible_user_id)
+            logger.debug("User profile retrieved: %s", custom_user)
+        except Users.DoesNotExist:
+            logger.error("User profile not found for user ID: %s", responsible_user_id)
+            return Response({"error": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Crear el proyecto con los datos del request
+        project_data = request.data
+        project_data['start_date'] = timezone.now().strftime('%Y-%m-%d')
+        project_data['name_uniuser'] = custom_user.university if custom_user.university else ""
+        project_data['responsible'] = responsible_user_id
+
+        # Serializar y validar los datos del proyecto
         project_serializer = ProjectSerializerCreate(data=project_data)
-        
-        if project_serializer.is_valid():
-            project_serializer.save()  # Guarda el proyecto si los datos son válidos
-            return Response(project_serializer.data, status=status.HTTP_201_CREATED)
-        
+        if await sync_to_async(project_serializer.is_valid)():
+            project = await sync_to_async(project_serializer.save)()
+            logger.debug("Project created successfully: %s", project)
+
+            # Calcular creator_name de forma asíncrona
+            creator_name = await self.get_creator_name_create_project(responsible_user_id)
+
+            # Contar las colaboraciones de forma asíncrona
+            collaboration_count = await self.count_collaborations(project)
+
+            # Obtener los nombres de los colaboradores de forma asíncrona
+            collaborators = await self.get_collaborators(project)
+
+            # Construir la respuesta final
+            response_data = {
+                'id': project.id,
+                'name': project.name,
+                'description': project.description,
+                'start_date': project.start_date.isoformat(),
+                'end_date': project.end_date.isoformat() if project.end_date else None,
+                "status": project.status,
+                "project_type": project.project_type ,
+                "priority":project.priority,
+                "detailed_description":project.detailed_description,
+                "accepting_applications":project.accepting_applications,
+                "objectives":project.objectives,
+                "necessary_requirements":project.necessary_requirements,
+                "progress":project.progress,
+                "type_aplyuni":project.type_aplyuni,
+                'name_uniuser': project.name_uniuser,
+                'responsible': responsible_user_id,
+                'creator_name': creator_name,
+                'collaboration_count': collaboration_count,
+                'collaborators': collaborators,
+                'status': project.status,
+            }
+            
+
+            logger.debug("Response data for created project: %s", response_data)
+            return Response(response_data, status=status.HTTP_201_CREATED)
+
+        logger.error("Project serializer errors: %s", project_serializer.errors)
         return Response(project_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    async def get_creator_name_create_project(self, responsible_user_id):
+        try:
+            auth_user = await sync_to_async(User.objects.get)(id=responsible_user_id)
+            return f"{auth_user.first_name} {auth_user.last_name}"
+        except User.DoesNotExist:
+            logger.error("Auth user not found for ID: %s", responsible_user_id)
+            return "Unknown"
+
+    async def count_collaborations(self, project):
+        count = await sync_to_async(Collaborations.objects.filter(project=project).count)()
+        logger.debug("Collaboration count for project ID %s: %d", project.id, count)
+        return count
+
+    async def get_collaborators(self, project):
+        collaborators_qs = await sync_to_async(lambda: list(Collaborations.objects.filter(project=project).select_related('user__authuser')))()
+        collaborators = [
+            f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
+            for collab in collaborators_qs if collab.user and collab.user.authuser
+        ]
+        logger.debug("Collaborators retrieved for project ID %s: %s", project.id, collaborators)
+        return collaborators
 
     @swagger_auto_schema(
         operation_description="Actualizar un proyecto específico pasando el ID y los datos del proyecto en el cuerpo de la solicitud",
@@ -642,20 +707,75 @@ class PublicacionViewSet(ViewSet):
     )
     @action(detail=False, methods=['POST'], url_path='view_project_id', permission_classes=[IsAuthenticated])
     async def view_project_id(self, request):
+
         project_id = request.data.get('id')
+        user_id = request.user.id  # Obtiene el ID del usuario autenticado
 
         if not project_id:
-            return Response({"error": "Project ID is required"}, status=status.HTTP_400_BAD_REQUEST)
 
+            return Response({"error": "Project ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
         try:
-            # Obtener el proyecto usando el ID
             project = await sync_to_async(Projects.objects.get)(pk=project_id)
         except Projects.DoesNotExist:
+
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Serializa los datos del proyecto
-        serializer = ProjectSerializerID(project, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        creator_name = await self.get_creator_name_view_project_id(project)
+        collaboration_count = await self.get_collaboration_count_view_project_id(project)
+        has_applied = await self.get_has_applied(user_id, project)
+
+        response_data = {
+            'id': project.id,
+            'name': project.name,
+            'description': project.description,
+            'start_date': project.start_date.isoformat(),
+            'end_date': project.end_date.isoformat() if project.end_date else None,
+            'status': project.status,
+            'project_type': project.project_type,
+            'priority': project.priority,
+            'responsible': project.responsible.id if project.responsible else None,
+            'name_uniuser': project.name_uniuser,
+            'detailed_description': project.detailed_description,
+            'necessary_requirements': project.necessary_requirements,
+            'progress': project.progress,
+            'objectives': project.objectives,
+            'accepting_applications': project.accepting_applications,
+            'type_aplyuni': project.type_aplyuni,
+            'creator_name': creator_name,
+            'collaboration_count': collaboration_count,
+            'has_applied': has_applied,
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    async def get_creator_name_view_project_id(self, obj):
+
+        if obj.responsible_id: 
+            authuser = await sync_to_async(User.objects.get)(id=obj.responsible_id)
+            if authuser:
+                return f"{authuser.first_name} {authuser.last_name}"
+        return None
+
+    async def get_collaboration_count_view_project_id(self, obj):
+        count = await sync_to_async(Collaborations.objects.filter(project=obj).count)()
+        return count
+    
+    async def get_has_applied(self, user_id, project):
+        try:
+            project_responsible = await sync_to_async(lambda: project.responsible)()
+        except Exception:
+            return False
+        if project_responsible is not None:
+            try:
+                responsible_user = await sync_to_async(Users.objects.get)(id=project_responsible)
+                if responsible_user and responsible_user.authuser is not None:
+                    responsible_user_id = responsible_user.authuser.id
+                    return responsible_user_id == user_id
+            except Users.DoesNotExist:
+                return False
+            except Exception:
+                return False
     
     @swagger_auto_schema(
         operation_description="Retrieve all projects in ascending order by start date",
