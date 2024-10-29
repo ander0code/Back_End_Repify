@@ -5,7 +5,7 @@ from adrf.serializers import Serializer
 from asgiref.sync import sync_to_async
 
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Users, Projects , Collaborations, Solicitudes, Notifications, Forms  
+from .models import Users, Projects , Collaborations, Solicitudes, Notifications, Forms, Achievements, UserAchievements  # Asegúrate de tener bien definido tu modelo de Usuarios
 
 from .models import Users, Projects , Collaborations, Solicitudes  
 from rest_framework import serializers
@@ -268,3 +268,13 @@ class FormSerializer(adrf.serializers.ModelSerializer):
     class Meta:
         model = Forms
         fields = ['id', 'title', 'url', 'created_at', 'user']
+
+class AchievementsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Achievements
+        fields = "__all__"
+
+class UserAchievementsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserAchievements
+        fields = "__all__"

@@ -5,12 +5,12 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,ProjectUpdateSerializer,CollaboratorSerializer,ProjectSerializer, NotificationSerializer,ProfileSerializer, NotificationSerializerMS, FormSerializer
+from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,ProjectUpdateSerializer,CollaboratorSerializer,ProjectSerializer, NotificationSerializer,ProfileSerializer, NotificationSerializerMS, FormSerializer, UserAchievementsSerializer,AchievementsSerializer
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
-from usuario.models import Users,Projects,Solicitudes,Collaborations, Notifications, Forms
+from usuario.models import Users,Projects,Solicitudes,Collaborations, Notifications, Forms, Achievements, UserAchievements
 from rest_framework.permissions import AllowAny ,IsAuthenticated
 import random
 import logging
@@ -1585,3 +1585,111 @@ class FormsViewSet(ViewSet):
 
     async def get_user(self, user_id):
         return await sync_to_async(User.objects.get)(id=user_id)
+
+class UserAchievementsViewSet(ViewSet):
+
+    @swagger_auto_schema(
+        operation_description="Validar logros de un usuario y almacenarlos",
+        responses={
+            status.HTTP_200_OK: openapi.Response('Logros validados y almacenados'),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Error en la solicitud'),
+        },
+        tags=["User Achievements"]
+    )
+    @action(detail=False, methods=['POST'],  url_path='validate_achievements', permission_classes=[IsAuthenticated])
+    def validate_achievements(self, request):
+        user = request.user  # Esto ya es la instancia del modelo 'Users'
+        unlocked_achievements = []
+
+        try:
+
+            achievements = Achievements.objects.all()
+            for achievement in achievements:
+                unlocked = False
+
+                # Aquí evalúa los criterios para desbloquear logros
+                if achievement.id == 1:  # Primera Gran Misión
+                    unlocked = Projects.objects.filter(responsible=user.id).exists()
+                elif achievement.id == 2:  # Manos a la Obra
+                    unlocked = Projects.objects.filter(status='En progreso', responsible=user.id).count() >= 2
+                elif achievement.id == 3:  # Incansable Constructor
+                    unlocked = Projects.objects.filter(status='completado', responsible=user.id).count() >= 5
+                elif achievement.id == 4:  # Siempre al Liderazgo
+                    unlocked = Projects.objects.filter(responsible=user.id).count() >= 3
+                #elif achievement.id == 5:  # Compromiso sin Fronteras
+                    #unlocked = Collaborations.objects.filter(user=user.id).values('project__university').distinct().count() >= 3
+                elif achievement.id == 6:  # Multitasker
+                    unlocked = Projects.objects.filter(status='En progreso', responsible=user.id).count() >= 3
+                elif achievement.id == 7:  # Colaborador Compulsivo
+                    unlocked = Collaborations.objects.filter(user=user.id).count() >= 10
+                #elif achievement.id == 8:  # Maestro de Roles
+                    #unlocked = Collaborations.objects.filter(user=user.id).values('project').annotate(unique_roles=Count('role')).count() > 1
+                elif achievement.id == 9:  # Líder Experto
+                    unlocked = Projects.objects.filter(status='completado', responsible=user.id).count() >= 5
+                '''elif achievement.id == 10:  # Desarrollador Incansable
+                    unlocked = Projects.objects.filter(status='completado', project_type='Desarrollo de Software', responsible=user.id).count() >= 3
+                elif achievement.id == 11:  # Investigador Académico
+                    unlocked = Projects.objects.filter(status='completado', project_type='Investigación Académica', responsible=user.id).count() >= 2
+                elif achievement.id == 12:  # Creador Ecológico
+                    unlocked = Projects.objects.filter(status='completado', project_type='Ambiental', responsible=user.id).count() >= 3
+                elif achievement.id == 13:  # Analista de Datos
+                    unlocked = Projects.objects.filter(status='completado', project_type='Análisis de Datos', responsible=user.id).count() >= 2
+                elif achievement.id == 14:  # Planificador Estratégico
+                    unlocked = Projects.objects.filter(status='completado', project_type='Planificación y Gestión', responsible=user.id).count() >= 1
+                elif achievement.id == 15:  # Innovador del Futuro
+                    unlocked = Projects.objects.filter(status='completado', project_type='Innovación o Emprendimiento', responsible=user.id).count() >= 2'''
+
+                if unlocked:
+                # Verificar si el logro ya ha sido desbloqueado por el usuario
+                    if not UserAchievements.objects.filter(user=user.id, achievement=achievement).exists():
+                        unlocked_achievements.append(achievement.id)
+
+                        # Guardar en UserAchievements
+                        user_achievement_data = {
+                            'user': user.id,  # Asignar el ID del usuario autenticado
+                            'achievement': achievement.id,  # Asignar el ID del logro
+                            'unlocked': True,  # Estado de desbloqueo
+                        }
+
+                        # Serializa los datos
+                        user_achievement_serializer = UserAchievementsSerializer(data=user_achievement_data)
+
+                        # Guarda si los datos son válidos
+                        if user_achievement_serializer.is_valid():
+                            user_achievement_serializer.save()
+                        else:
+                            return Response(user_achievement_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            return Response({'unlocked_achievements': unlocked_achievements}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    @swagger_auto_schema(
+        operation_description="Obtener todos los logros del usuario",
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                'Lista de logros',
+                openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del logro del usuario'),
+                            'achievement': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del logro correspondiente'),
+                            'unlocked': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Estado del logro (desbloqueado o no)'),
+                            'user': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario al que pertenece el logro'),
+                        },
+                    ),
+                ),
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Error en la solicitud'),
+        },
+        tags=["User Achievements"]
+    )
+    @action(detail=False, methods=['GET'], url_path='list_user_achievements', permission_classes=[IsAuthenticated])
+    def list_user_achievements(self, request):
+        user = request.user
+        user_achievements = UserAchievements.objects.filter(user=user.id)
+
+        serializer = UserAchievementsSerializer(user_achievements, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
