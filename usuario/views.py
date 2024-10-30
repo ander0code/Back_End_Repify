@@ -837,17 +837,6 @@ class PublicacionViewSet(ViewSet):
 
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    async def get_creator_name(self, obj):
-        if obj.responsible_id: 
-            authuser = await sync_to_async(User.objects.get)(id=obj.responsible_id)
-            if authuser:
-                return f"{authuser.first_name} {authuser.last_name}"
-        return None
-
-    async def get_collaboration_count(self, obj):
-        count = await sync_to_async(Collaborations.objects.filter(project=obj).count)()
-        return count
-    
     @swagger_auto_schema(
         operation_description="Retrieve the 3 most recent projects in descending order by start date",
         responses={
@@ -860,14 +849,57 @@ class PublicacionViewSet(ViewSet):
         tags=["CRUD Project Management"]
     )
     @action(detail=False, methods=['GET'], url_path='view_recent_projects', permission_classes=[IsAuthenticated])
-    def view_recent_projects(self, request):
-        # Obtener los 3 proyectos más recientes ordenados por start_date en orden descendente
-        recent_projects = Projects.objects.all().order_by('-id')[:3]
-        
-        # Serializar los proyectos
-        serializer = ProjectSerializerAll(recent_projects, many=True)
-        
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    async def view_recent_projects(self, request):
+ 
+        try:
+            # Obtener todos los proyectos de forma asíncrona
+            projects = await sync_to_async(list)(Projects.objects.all().order_by('-id')[:3])
+
+            project_data = []
+            for project in projects:
+                # Obtiene el nombre del creador y el conteo de colaboraciones de forma asíncrona
+                creator_name = await self.get_creator_name(project)
+
+                collaboration_count = await self.get_collaboration_count(project)
+
+                # Agrega los datos al diccionario
+                project_dict = {
+                    'id': project.id,
+                    'name': project.name,
+                    'description': project.description,
+                    'start_date': project.start_date,
+                    'end_date': project.end_date,
+                    'status': project.status,
+                    'project_type': project.project_type,
+                    'priority': project.priority,
+                    'responsible': project.responsible_id,
+                    'name_uniuser': project.name_uniuser,
+                    'detailed_description': project.detailed_description,
+                    'progress': project.progress,
+                    'accepting_applications': project.accepting_applications,
+                    'type_aplyuni': project.type_aplyuni,
+                    'creator_name': creator_name,
+                    'collaboration_count': collaboration_count,
+                }
+                project_data.append(project_dict)
+
+            return Response(project_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+           
+    async def get_creator_name(self, obj):
+        if obj.responsible_id: 
+            authuser = await sync_to_async(User.objects.get)(id=obj.responsible_id)
+            if authuser:
+                return f"{authuser.first_name} {authuser.last_name}"
+        return None
+
+    async def get_collaboration_count(self, obj):
+        count = await sync_to_async(Collaborations.objects.filter(project=obj).count)()
+        return count
+                   
            
     @swagger_auto_schema(
         operation_description="Aplicar a un proyecto",
@@ -1296,17 +1328,36 @@ class PublicacionViewSet(ViewSet):
         tags=["Project Management"]
     )
     @action(detail=False, methods=['GET'], url_path='my-latest-project', permission_classes=[IsAuthenticated])
-    def view_latest_project_usercreator(self, request):
-        # Obtener la instancia del modelo Users asociada al usuario autenticado
-        try:
-            user_instance = request.user.id  # Ajusta esto si tu relación es diferente
-        except Users.DoesNotExist:
-            return Response({"message": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND)
-        # Filtrar el proyecto más reciente creado por el usuario, ordenado por id
-        latest_project = Projects.objects.filter(responsible=user_instance).order_by('-id').first()
+    async def view_latest_project_usercreator(self, request):
+        # Get the authenticated user ID
+        user_instance = request.user.id
+
+        # Filter the latest project created by the user, ordered by ID
+        latest_project = await sync_to_async(lambda: Projects.objects.filter(responsible=user_instance).order_by('-id').first())()
+
         if latest_project:
-            serializer = ProjectSerializer(latest_project)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            # Manually construct the response data
+            project_data = {
+                'id': latest_project.id,
+                'name': latest_project.name,
+                'description': latest_project.description,
+                'start_date': latest_project.start_date,
+                'end_date': latest_project.end_date,
+                'status': latest_project.status,
+                'project_type': latest_project.project_type,
+                'priority': latest_project.priority,
+                'responsible': latest_project.responsible_id,
+                'detailed_description': latest_project.detailed_description,
+                'type_aplyuni': latest_project.type_aplyuni,
+                'objectives': latest_project.objectives,
+                'necessary_requirements': latest_project.necessary_requirements,
+                'progress': latest_project.progress,
+                'accepting_applications': latest_project.accepting_applications,
+                'name_uniuser': latest_project.name_uniuser,
+                # Add any additional fields as needed
+            }
+
+            return Response(project_data, status=status.HTTP_200_OK)
         else:
             return Response({"message": "No se encontraron proyectos"}, status=status.HTTP_404_NOT_FOUND)
     
@@ -1439,6 +1490,68 @@ class PublicacionViewSet(ViewSet):
         else:
             return Response({"message": "No se encontraron colaboraciones."}, status=status.HTTP_404_NOT_FOUND)
         
+    @swagger_auto_schema(
+        operation_description="Obtener los dos proyectos más recientes en los que el usuario está colaborando",
+        responses={
+            status.HTTP_200_OK: openapi.Response('Lista de los dos proyectos más recientes en los que el usuario colabora'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('No se encontraron proyectos'),
+        },
+        tags=["Project Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='my-latest-two-collaborated-projects', permission_classes=[IsAuthenticated])
+    async def view_latest_two_collaborated_projects(self, request):
+    
+        user_instance = request.user.id
+            
+        collaborations = await sync_to_async(list)(Collaborations.objects.filter(user=user_instance))
+
+        if collaborations:
+            
+            project_ids = await sync_to_async(lambda: [collab.project_id for collab in collaborations])()
+            projects = await sync_to_async(list)(Projects.objects.filter(id__in=project_ids))
+
+            if projects:
+        
+                response_data = []
+                for project in projects:
+                    collaboratorsall = await sync_to_async(list)(Collaborations.objects.filter(project=project).select_related('user__authuser'))
+                        
+                    collaborators_info = await self.get_collaborators_info_proyect(collaboratorsall)
+
+                    name_responsible = await self.get_responsible_name_proyect(project)
+
+                    collaboration_count = await self.get_collaboration_count_proyect(project)
+
+                    project_data = {
+                            'id': project.id,
+                            'name': project.name,
+                            'description': project.description,
+                            'start_date': project.start_date,
+                            'end_date': project.end_date,
+                            'status': project.status,
+                            'project_type': project.project_type,
+                            'priority': project.priority,
+                            'responsible': project.responsible_id,  
+                            'name_responsible': name_responsible,
+                            'detailed_description': project.detailed_description,
+                            'type_aplyuni': project.type_aplyuni,
+                            'objectives': project.objectives,
+                            'necessary_requirements': project.necessary_requirements,
+                            'progress': project.progress,
+                            'accepting_applications': project.accepting_applications,
+                            'name_uniuser': project.name_uniuser,
+                            'collaboration_count': collaboration_count,
+                            'collaborators': collaborators_info,
+                        }
+                    response_data.append(project_data)
+
+                return Response(response_data, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "No se encontraron proyectos"}, status=status.HTTP_404_NOT_FOUND)
+
+        else:
+            return Response({"message": "No se encontraron colaboraciones."}, status=status.HTTP_404_NOT_FOUND)
+            
     async def get_collaboration_count_proyect(self, project):
         return await sync_to_async(lambda: Collaborations.objects.filter(project=project).count())()
 
@@ -1459,29 +1572,9 @@ class PublicacionViewSet(ViewSet):
             authuser = await sync_to_async(User.objects.get)(id=obj.responsible_id)
             if authuser:
                 return f"{authuser.first_name} {authuser.last_name}"    
-      
-    @swagger_auto_schema(
-        operation_description="Obtener los dos proyectos más recientes en los que el usuario está colaborando",
-        responses={
-            status.HTTP_200_OK: openapi.Response('Lista de los dos proyectos más recientes en los que el usuario colabora'),
-            status.HTTP_404_NOT_FOUND: openapi.Response('No se encontraron proyectos'),
-        },
-        tags=["Project Management"]
-    )
-    @action(detail=False, methods=['GET'], url_path='my-latest-two-collaborated-projects', permission_classes=[IsAuthenticated])
-    def view_latest_two_collaborated_projects(self, request):
-        # Obtener la instancia del usuario autenticado
-        user_instance = request.user.id  # Ajusta esto si tu relación es diferente
-        # Filtrar colaboraciones del usuario
-        collaborations = Collaborations.objects.filter(user=user_instance)
-        # Obtener los proyectos relacionados a las colaboraciones, limitados a los dos más recientes
-        projects = Projects.objects.filter(id__in=collaborations.values_list('project', flat=True)).order_by('-id')[:2]
-        if projects.exists():
-            serializer = ProjectSerializer(projects, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response({"message": "No se encontraron proyectos en los que colabora."}, status=status.HTTP_404_NOT_FOUND)  
-             
+           
+        
+        
     @swagger_auto_schema(
         method='delete',
         operation_summary="Delete Collaborator",

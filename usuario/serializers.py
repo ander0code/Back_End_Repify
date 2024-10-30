@@ -1,5 +1,5 @@
 from django.contrib.auth import authenticate
-
+from django.contrib.auth.models import User
 import adrf
 from adrf.serializers import Serializer
 from asgiref.sync import sync_to_async
@@ -106,7 +106,7 @@ class ProjectSerializerCreate(adrf.serializers.ModelSerializer):
             'id': {'read_only': True},
         }
 
-class ProjectSerializerAll(serializers.ModelSerializer):
+class ProjectSerializerAll(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField()
     collaboration_count = serializers.SerializerMethodField()
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
@@ -131,10 +131,8 @@ class ProjectSerializerAll(serializers.ModelSerializer):
             'creator_name',
             'collaboration_count'
         ]
-        extra_kwargs = {
-            'id': {'read_only': True},
-        }
 
+    
 class ProjectSerializerID(serializers.ModelSerializer):
     
     creator_name = serializers.SerializerMethodField() 
