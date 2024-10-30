@@ -1853,3 +1853,7 @@ class UserAchievementsViewSet(ViewSet):
 
         serializer = UserAchievementsSerializer(user_achievements, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    
+    
+    
