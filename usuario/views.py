@@ -1,6 +1,7 @@
 from adrf.viewsets import ViewSet
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.db.models import Count
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
@@ -1669,7 +1670,6 @@ class UserAchievementsViewSet(ViewSet):
         unlocked_achievements = []
 
         try:
-
             achievements = Achievements.objects.all()
             for achievement in achievements:
                 unlocked = False
@@ -1683,28 +1683,33 @@ class UserAchievementsViewSet(ViewSet):
                     unlocked = Projects.objects.filter(status='completado', responsible=user.id).count() >= 5
                 elif achievement.id == 4:  # Siempre al Liderazgo
                     unlocked = Projects.objects.filter(responsible=user.id).count() >= 3
-                #elif achievement.id == 5:  # Compromiso sin Fronteras
-                    #unlocked = Collaborations.objects.filter(user=user.id).values('project__university').distinct().count() >= 3
+                elif achievement.id == 5:  # Compromiso sin Fronteras
+                    user_instance = Users.objects.get(authuser=user)
+                    unlocked = Collaborations.objects.filter(user=user_instance.id).select_related('project').values('project__responsible__university').distinct().count() >= 3
                 elif achievement.id == 6:  # Multitasker
                     unlocked = Projects.objects.filter(status='En progreso', responsible=user.id).count() >= 3
                 elif achievement.id == 7:  # Colaborador Compulsivo
                     unlocked = Collaborations.objects.filter(user=user.id).count() >= 10
-                #elif achievement.id == 8:  # Maestro de Roles
-                    #unlocked = Collaborations.objects.filter(user=user.id).values('project').annotate(unique_roles=Count('role')).count() > 1
+                elif achievement.id == 8:  # Maestro de Roles
+                    # Verifica si el usuario tiene más de una colaboración única en proyectos
+                    collaborations_count = Collaborations.objects.filter(user=user.id).values('project').annotate(unique_roles=Count('role')).count()
+                    projects_count = Projects.objects.filter(responsible=user.id).count()
+                    # Desbloquea el logro si hay colaboraciones y es responsable de al menos un proyecto
+                    unlocked = collaborations_count > 0 and projects_count > 0
                 elif achievement.id == 9:  # Líder Experto
                     unlocked = Projects.objects.filter(status='completado', responsible=user.id).count() >= 5
-                '''elif achievement.id == 10:  # Desarrollador Incansable
-                    unlocked = Projects.objects.filter(status='completado', project_type='Desarrollo de Software', responsible=user.id).count() >= 3
+                elif achievement.id == 10:  # Desarrollador Incansable
+                    unlocked = Projects.objects.filter(status='completado', project_type__contains=['Desarrollo de Software'], responsible=user.id).count() >= 3
                 elif achievement.id == 11:  # Investigador Académico
-                    unlocked = Projects.objects.filter(status='completado', project_type='Investigación Académica', responsible=user.id).count() >= 2
+                    unlocked = Projects.objects.filter(status='completado', project_type__contains=['Investigación Académica'], responsible=user.id).count() >= 2
                 elif achievement.id == 12:  # Creador Ecológico
-                    unlocked = Projects.objects.filter(status='completado', project_type='Ambiental', responsible=user.id).count() >= 3
+                    unlocked = Projects.objects.filter(status='completado', project_type__contains=['Ambiental'], responsible=user.id).count() >= 3
                 elif achievement.id == 13:  # Analista de Datos
-                    unlocked = Projects.objects.filter(status='completado', project_type='Análisis de Datos', responsible=user.id).count() >= 2
+                    unlocked = Projects.objects.filter(status='completado', project_type__contains=['Análisis de Datos'], responsible=user.id).count() >= 2
                 elif achievement.id == 14:  # Planificador Estratégico
-                    unlocked = Projects.objects.filter(status='completado', project_type='Planificación y Gestión', responsible=user.id).count() >= 1
+                    unlocked = Projects.objects.filter(status='completado', project_type__contains=['Planificación y Gestión'], responsible=user.id).count() >= 1
                 elif achievement.id == 15:  # Innovador del Futuro
-                    unlocked = Projects.objects.filter(status='completado', project_type='Innovación o Emprendimiento', responsible=user.id).count() >= 2'''
+                    unlocked = Projects.objects.filter(status='completado', project_type__contains=['Innovación o Emprendimiento'], responsible=user.id).count() >= 2
 
                 if unlocked:
                 # Verificar si el logro ya ha sido desbloqueado por el usuario
