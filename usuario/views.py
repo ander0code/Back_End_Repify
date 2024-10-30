@@ -6,7 +6,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,ProjectUpdateSerializer,CollaboratorSerializer,ProjectSerializer, NotificationSerializer,ProfileSerializer, NotificationSerializerMS, FormSerializer, UserAchievementsSerializer,AchievementsSerializer
+from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,ProjectUpdateSerializer,CollaboratorSerializer,ProjectSerializer, NotificationSerializer,ProfileSerializer, NotificationSerializerMS, FormSerializer, UserAchievementsSerializer
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
@@ -1859,8 +1859,56 @@ class UserAchievementsViewSet(ViewSet):
         serializer = UserAchievementsSerializer(user_achievements, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
+    @swagger_auto_schema(
+        operation_summary="Obtener métricas actuales del usuario",
+        responses={
+            200: openapi.Response('Métricas del usuario', 
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'Proyectos en Progreso': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'Logros Desbloqueados': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'Proyectos Finalizados': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'Proyectos en los que eres Miembro': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'Proyectos como Líder': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    }
+                )
+            ),
+            404: "Usuario no encontrado",
+        },
+        tags=["User Achievements"]
+    )
+    @action(detail=False, methods=['GET'], url_path='metrics', permission_classes=[IsAuthenticated])
+    def metrics(self, request):
+        user_id = request.user.id
+        # Contar proyectos en progreso
+        projects_in_progress = Projects.objects.filter(status='En progreso').count()
+        
+        # Contar logros desbloqueados
+        unlocked_achievements = UserAchievements.objects.filter(user_id=user_id, unlocked=True).count()
+        
+        # Contar proyectos finalizados
+        completed_projects = Projects.objects.filter(status='Completado').count()
+        
+        # Contar proyectos en los que el usuario es miembro
+        member_projects = Collaborations.objects.filter(user_id=user_id).values('project').distinct().count()
+        
+        # Contar proyectos donde el usuario es líder
+        leader_projects = Projects.objects.filter(responsible_id=user_id).count()
+
+        # Crear un diccionario con las métricas
+        metrics = {
+            "Proyectos en Progreso": projects_in_progress,
+            "Logros Desbloqueados": unlocked_achievements,
+            "Proyectos Finalizados": completed_projects,
+            "Proyectos en los que eres Miembro": member_projects,
+            "Proyectos como Líder": leader_projects,
+        }
+
+        return Response(metrics, status=status.HTTP_200_OK)
     
     
+
     
     
     
