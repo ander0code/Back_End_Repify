@@ -346,6 +346,40 @@ class PerfilViewSet(ViewSet):
         except Users.DoesNotExist:
             return Response({"error": "User profile not found"}, status=404)
 
+
+    @action(detail=False, methods=['POST'], url_path='profile_id', permission_classes=[IsAuthenticated])
+    async def profile_data_id(self, request):
+        
+        user_id = request.data.get('user_id')
+
+        try:
+            user_profile = await sync_to_async(Users.objects.get)(authuser_id=user_id)
+            auth_user = await sync_to_async(User.objects.get)(id=user_id)
+
+            # Reunir los datos para serializar
+            profile_data = {
+                "university": user_profile.university,
+                "career": user_profile.career,
+                "cycle": user_profile.cycle,
+                "biography": user_profile.biography,
+                "interests": user_profile.interests,
+                "photo": user_profile.photo,
+                "achievements": user_profile.achievements,
+                "created_at": user_profile.created_at,
+                # Datos de authuser
+                "email": auth_user.email,
+                "first_name": auth_user.first_name,
+                "last_name": auth_user.last_name,
+                "date_joined": auth_user.date_joined,
+            }
+
+            serializer = ProfileSerializer(profile_data)
+            return Response(serializer.data, status=200)
+
+        except Users.DoesNotExist:
+            return Response({"error": "User profile not found"}, status=404)
+
+
     @swagger_auto_schema(
         operation_description="Update user profile by ID. Accepts various fields such as university, career, cycle, biography, interests, photo, achievements, and created_at.",
         request_body=openapi.Schema(
