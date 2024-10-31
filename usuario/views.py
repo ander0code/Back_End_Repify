@@ -980,6 +980,7 @@ class PublicacionViewSet(ViewSet):
     @action(detail=False, methods=['POST'], url_path='ApplyProject', permission_classes=[IsAuthenticated])
     async def ApplyProject(self, request):
         project_id = request.data.get('project_id')
+        message = request.data.get('message')
         user = request.user
         
 
@@ -1009,6 +1010,7 @@ class PublicacionViewSet(ViewSet):
                 'name_lider': name_lider,
                 'created_at': timezone.now().strftime('%Y-%m-%d'),
                 'id_project': project.id,
+                "message" : message,
                 'status': 'Pendiente',
                 'name_project': project.name,
                 'name_user': f"{user.first_name} {user.last_name}",
