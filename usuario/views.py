@@ -1891,9 +1891,15 @@ class UserAchievementsViewSet(ViewSet):
     def list_user_achievements(self, request):
         user = request.user
         user_achievements = UserAchievements.objects.filter(user=user.id)
+       # Serializar los logros del usuario
+        data = []
+        for achievement in user_achievements:
+            achievement_data = UserAchievementsSerializer(achievement).data
+            achievement_data['first_name'] = user.first_name
+            achievement_data['last_name'] = user.last_name
+            data.append(achievement_data)
 
-        serializer = UserAchievementsSerializer(user_achievements, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(data, status=status.HTTP_200_OK)
     
     @swagger_auto_schema(
         operation_summary="Obtener métricas actuales del usuario",
