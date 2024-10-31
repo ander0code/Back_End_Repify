@@ -63,6 +63,7 @@ class Solicitudes(models.Model):
     id_user = models.ForeignKey('Users', models.DO_NOTHING, db_column='id_user', blank=True, null=True)
     id_project = models.ForeignKey(Projects, models.DO_NOTHING, db_column='id_project', blank=True, null=True)
     status = models.TextField()
+    message = models.TextField(blank=True, null=True)
     name_user = models.TextField(blank=True, null=True)
     name_lider = models.TextField(blank=True, null=True)
     name_project = models.TextField(blank=True, null=True)
