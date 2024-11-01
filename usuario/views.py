@@ -6,7 +6,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,ProjectUpdateSerializer,CollaboratorSerializer,ProjectSerializer, NotificationSerializer,ProfileSerializer, NotificationSerializerMS, FormSerializer, UserAchievementsSerializer
+from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,ProjectUpdateSerializer,CollaboratorSerializer,ProjectSerializer, NotificationSerializer,ProfileSerializer, NotificationSerializerMS, FormSerializer, UserAchievementsSerializer, AchievementsSerializer
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
@@ -2149,9 +2149,73 @@ class UserAchievementsViewSet(ViewSet):
 
         return Response(metrics, status=status.HTTP_200_OK)
     
+    @swagger_auto_schema(
+        operation_description="Obtener todos los logros",
+        responses={
+            status.HTTP_200_OK: openapi.Response('Lista de logros', AchievementsSerializer(many=True)),
+            status.HTTP_404_NOT_FOUND: openapi.Response('No se encontraron logros'),
+        },
+        tags=["User Achievements"]
+    )
+    @action(detail=False, methods=['GET'], url_path='all_achievements', permission_classes=[IsAuthenticated])
+    async def get_all_achievements(self, request):
+        # Obtener todos los logros de forma asincrónica
+        achievements = await self.get_achievements()
+        
+        if not achievements:
+            return Response({'detail': 'No se encontraron logros.'}, status=status.HTTP_404_NOT_FOUND)
 
+        # Serializar los logros
+        serializer = AchievementsSerializer(achievements, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    async def get_achievements(self):
+        return await sync_to_async(list)(Achievements.objects.all())
     
     
-    
+    @swagger_auto_schema(
+        operation_description="Obtener todos los logros disponibles",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['user_id'],
+            properties={
+                'user_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario'),
+            },
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response('Lista de logros disponibles', AchievementsSerializer(many=True)),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Usuario no encontrado'),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('ID de usuario inválido'),
+        },
+        tags=["User Achievements"]
+    )
+    @action(detail=False, methods=['POST'], url_path='get_all_achievements_id', permission_classes=[IsAuthenticated])
+    async def get_all_achievements_id(self, request):
+        user_id = request.data.get('user_id')
+
+        # Validar el ID del usuario
+        if user_id is None:
+            return Response({'detail': 'ID de usuario inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verificar si el usuario existe
+        user_exists = await self.check_user_exists(user_id)
+        
+        if not user_exists:
+            return Response({'detail': 'Usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Obtener todos los logros de forma asíncrona
+        achievements = await self.get_all_achievements()
+        
+        # Serializar los logros
+        serializer = AchievementsSerializer(achievements, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    async def check_user_exists(self, user_id):
+        # Verificar si el usuario existe
+        return await sync_to_async(Users.objects.filter(id=user_id).exists)()
+
+    async def get_all_achievements(self):
+        # Obtener todos los logros
+        return await sync_to_async(list)(Achievements.objects.all())
     
     
