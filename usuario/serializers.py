@@ -270,9 +270,10 @@ class FormSerializer(adrf.serializers.ModelSerializer):
 class AchievementsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Achievements
-        fields = "__all__"
+        fields = ['id', 'name', 'description']
 
 class UserAchievementsSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserAchievements
         fields = "__all__"
+
