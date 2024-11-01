@@ -1190,6 +1190,18 @@ class PublicacionViewSet(ViewSet):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+    @action(detail=False, methods=['PUT'], url_path='isread_notificaciones', permission_classes=[IsAuthenticated])
+    async def isread_notificaciones(self, request):
+        user = request.user
+        
+        try:
+            # Actualizar el campo isread de todas las notificaciones del usuario a 1
+            await sync_to_async(Notifications.objects.filter(user_id=user.id).update)(is_read=1)
+            return Response({"message": "Notificaciones marcadas como leídas"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    
     @swagger_auto_schema(
         operation_description="Retrieve all applications (solicitudes) submitted by the logged-in user.",
         responses={
