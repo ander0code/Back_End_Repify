@@ -1944,8 +1944,8 @@ class UserAchievementsViewSet(ViewSet):
         },
         tags=["User Achievements"]
     )
-    @action(detail=False, methods=['POST'], url_path='list_user_achievements_POST', permission_classes=[IsAuthenticated])
-    def list_user_achievements_POST(self, request):
+    @action(detail=False, methods=['POST'], url_path='list_user_achievements_id', permission_classes=[IsAuthenticated])
+    def list_user_achievements_id(self, request):
         user_id = request.data.get('user_id')
         user = Users.objects.filter(id=user_id).select_related('authuser').first()
 
@@ -2041,8 +2041,8 @@ class UserAchievementsViewSet(ViewSet):
         },
         tags=["User Achievements"]
     )
-    @action(detail=False, methods=['POST'], url_path='metrics_post', permission_classes=[IsAuthenticated])
-    def metrics_post(self, request):
+    @action(detail=False, methods=['POST'], url_path='metrics_id', permission_classes=[IsAuthenticated])
+    def metrics_id(self, request):
         user_id = request.data.get('user_id')
         
         if not user_id:
