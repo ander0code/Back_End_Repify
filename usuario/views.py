@@ -1877,22 +1877,31 @@ class UserAchievementsViewSet(ViewSet):
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+        
     @swagger_auto_schema(
         operation_description="Obtener todos los logros del usuario",
         responses={
             status.HTTP_200_OK: openapi.Response(
                 'Lista de logros',
                 openapi.Schema(
-                    type=openapi.TYPE_ARRAY,
-                    items=openapi.Schema(
-                        type=openapi.TYPE_OBJECT,
-                        properties={
-                            'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del logro del usuario'),
-                            'achievement': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del logro correspondiente'),
-                            'unlocked': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Estado del logro (desbloqueado o no)'),
-                            'user': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario al que pertenece el logro'),
-                        },
-                    ),
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'user': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario'),
+                        'first_name': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del usuario'),
+                        'last_name': openapi.Schema(type=openapi.TYPE_STRING, description='Apellido del usuario'),
+                        'achievements': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Schema(
+                                type=openapi.TYPE_OBJECT,
+                                properties={
+                                    'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del logro del usuario'),
+                                    'achievement': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del logro correspondiente'),
+                                    'unlocked': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Estado del logro (desbloqueado o no)'),
+                                },
+                            ),
+                        ),
+                    },
                 ),
             ),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Error en la solicitud'),
@@ -1903,15 +1912,28 @@ class UserAchievementsViewSet(ViewSet):
     def list_user_achievements(self, request):
         user = request.user
         user_achievements = UserAchievements.objects.filter(user=user.id)
-       # Serializar los logros del usuario
-        data = []
-        for achievement in user_achievements:
-            achievement_data = UserAchievementsSerializer(achievement).data
-            achievement_data['first_name'] = user.first_name
-            achievement_data['last_name'] = user.last_name
-            data.append(achievement_data)
+        
+        # Serializar los logros del usuario
+        achievements_data = [
+            {
+                "achievement": achievement.achievement.id,
+                "unlocked": achievement.unlocked,
+                "name": achievement.achievement.name,
+                "description": achievement.achievement.description
+                
+            }
+            for achievement in user_achievements
+        ]
 
-        return Response(data, status=status.HTTP_200_OK)
+        # Estructurar la respuesta final
+        response_data = {
+            "user": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "achievements": achievements_data
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
     
     @swagger_auto_schema(
         operation_description="Obtener todos los logros de un usuario específico",
@@ -1953,15 +1975,28 @@ class UserAchievementsViewSet(ViewSet):
             return Response({"error": "Usuario no encontrado."}, status=status.HTTP_400_BAD_REQUEST)
 
         user_achievements = UserAchievements.objects.filter(user=user.id)
-        
-        data = []
-        for achievement in user_achievements:
-            achievement_data = UserAchievementsSerializer(achievement).data
-            achievement_data['first_name'] = user.authuser.first_name
-            achievement_data['last_name'] = user.authuser.last_name
-            data.append(achievement_data)
+        # Serializar los logros del usuario
+        achievements_data = [
+            {
+                "achievement": achievement.achievement.id,
+                "unlocked": achievement.unlocked,
+                "name": achievement.achievement.name,
+                "description": achievement.achievement.description
+                
+            }
+            for achievement in user_achievements
+        ]
 
-        return Response(data, status=status.HTTP_200_OK)
+        # Estructurar la respuesta final
+        response_data = {
+            "user": user.id,
+            "first_name": user.authuser.first_name,
+            "last_name": user.authuser.last_name,
+            "achievements": achievements_data
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+    
     
     
     
@@ -2004,11 +2039,11 @@ class UserAchievementsViewSet(ViewSet):
 
         # Crear un diccionario con las métricas
         metrics = {
-            "Proyectos en Progreso": projects_in_progress,
-            "Logros Desbloqueados": unlocked_achievements,
-            "Proyectos Finalizados": completed_projects,
-            "Proyectos en los que eres Miembro": member_projects,
-            "Proyectos como Líder": leader_projects,
+            "proyectos_en_progreso": projects_in_progress,
+            "logros_desbloqueados": unlocked_achievements,
+            "proyectos_finalizados": completed_projects,
+            "proyectos_en_los_que_eres_miembro": member_projects,
+            "proyectos_como_líder": leader_projects,
         }
 
         return Response(metrics, status=status.HTTP_200_OK)
@@ -2065,11 +2100,11 @@ class UserAchievementsViewSet(ViewSet):
 
         # Crear un diccionario con las métricas
         metrics = {
-            "Proyectos en Progreso": projects_in_progress,
-            "Logros Desbloqueados": unlocked_achievements,
-            "Proyectos Finalizados": completed_projects,
-            "Proyectos en los que eres Miembro": member_projects,
-            "Proyectos como Líder": leader_projects,
+            "proyectos_en_progreso": projects_in_progress,
+            "logros_pesbloqueados": unlocked_achievements,
+            "proyectos_finalizados": completed_projects,
+            "proyectos_en_los_que_eres_miembro": member_projects,
+            "proyectos_como_líder": leader_projects,
         }
 
         return Response(metrics, status=status.HTTP_200_OK)
