@@ -1794,6 +1794,45 @@ class FormsViewSet(ViewSet):
 
     async def get_user(self, user_id):
         return await sync_to_async(User.objects.get)(id=user_id)
+    
+    @swagger_auto_schema(
+        operation_description="Eliminar un formulario existente",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['id'],
+            properties={
+                'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del formulario a eliminar'),
+            },
+        ),
+        responses={
+            status.HTTP_204_NO_CONTENT: openapi.Response('Formulario eliminado exitosamente'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Formulario no encontrado'),
+            status.HTTP_403_FORBIDDEN: openapi.Response('No tienes permiso para eliminar este formulario'),
+        },
+        tags=["Form Management"]
+    )
+    @action(detail=False, methods=['DELETE'], url_path='delete_form', permission_classes=[IsAuthenticated])
+    async def delete_form(self, request):
+        # Obtener el ID del formulario del cuerpo de la solicitud
+        form_id = request.data.get('id')
+
+        # Obtener el formulario de forma asincrónica
+        form = await self.get_form(form_id)
+
+        if form is None:
+            return Response({'detail': 'Formulario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Verificar si el usuario tiene permiso para eliminar el formulario
+        if form.user_id != request.user.id:
+            return Response({'detail': 'No tiene permiso para eliminar este formulario.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Eliminar el formulario de forma asincrónica
+        await sync_to_async(form.delete)()
+
+        return Response({'detail': 'Formulario eliminado correctamente.'}, status=status.HTTP_204_NO_CONTENT)
+
+    async def get_form(self, form_id):
+        return await sync_to_async(Forms.objects.get)(id=form_id)
 
 class UserAchievementsViewSet(ViewSet):
 
