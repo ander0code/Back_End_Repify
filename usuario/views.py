@@ -1902,6 +1902,58 @@ class UserAchievementsViewSet(ViewSet):
         return Response(data, status=status.HTTP_200_OK)
     
     @swagger_auto_schema(
+        operation_description="Obtener todos los logros de un usuario específico",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'user_id': openapi.Schema(type=openapi.TYPE_INTEGER, description="ID del usuario"),
+            },
+            required=['user_id']
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                'Lista de logros',
+                openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del logro del usuario'),
+                            'achievement': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del logro correspondiente'),
+                            'unlocked': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Estado del logro (desbloqueado o no)'),
+                            'user': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario al que pertenece el logro'),
+                            'first_name': openapi.Schema(type=openapi.TYPE_STRING, description="Nombre del usuario"),
+                            'last_name': openapi.Schema(type=openapi.TYPE_STRING, description="Apellido del usuario"),
+                        },
+                    ),
+                ),
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Error en la solicitud'),
+        },
+        tags=["User Achievements"]
+    )
+    @action(detail=False, methods=['POST'], url_path='list_user_achievements_POST', permission_classes=[IsAuthenticated])
+    def list_user_achievements_POST(self, request):
+        user_id = request.data.get('user_id')
+        user = Users.objects.filter(id=user_id).select_related('authuser').first()
+
+        if not user:
+            return Response({"error": "Usuario no encontrado."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_achievements = UserAchievements.objects.filter(user=user.id)
+        
+        data = []
+        for achievement in user_achievements:
+            achievement_data = UserAchievementsSerializer(achievement).data
+            achievement_data['first_name'] = user.authuser.first_name
+            achievement_data['last_name'] = user.authuser.last_name
+            data.append(achievement_data)
+
+        return Response(data, status=status.HTTP_200_OK)
+    
+    
+    
+    @swagger_auto_schema(
         operation_summary="Obtener métricas actuales del usuario",
         responses={
             200: openapi.Response('Métricas del usuario', 
@@ -1924,13 +1976,13 @@ class UserAchievementsViewSet(ViewSet):
     def metrics(self, request):
         user_id = request.user.id
         # Contar proyectos en progreso
-        projects_in_progress = Projects.objects.filter(status='En progreso').count()
+        projects_in_progress = Projects.objects.filter(status='En progreso',responsible_id=user_id).count()
         
         # Contar logros desbloqueados
         unlocked_achievements = UserAchievements.objects.filter(user_id=user_id, unlocked=True).count()
         
         # Contar proyectos finalizados
-        completed_projects = Projects.objects.filter(status='Completado').count()
+        completed_projects = Projects.objects.filter(status='Completado',responsible_id=user_id).count()
         
         # Contar proyectos en los que el usuario es miembro
         member_projects = Collaborations.objects.filter(user_id=user_id).values('project').distinct().count()
@@ -1948,7 +2000,67 @@ class UserAchievementsViewSet(ViewSet):
         }
 
         return Response(metrics, status=status.HTTP_200_OK)
-    
+
+    @swagger_auto_schema(
+        method='post',
+        operation_summary="Obtener métricas actuales del usuario",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'user_id': openapi.Schema(type=openapi.TYPE_INTEGER, description="ID del usuario"),
+            },
+            required=['user_id']
+        ),
+        responses={
+            200: openapi.Response(
+                'Métricas del usuario', 
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'Proyectos en Progreso': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'Logros Desbloqueados': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'Proyectos Finalizados': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'Proyectos en los que eres Miembro': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'Proyectos como Líder': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    }
+                )
+            ),
+            404: "Usuario no encontrado",
+        },
+        tags=["User Achievements"]
+    )
+    @action(detail=False, methods=['POST'], url_path='metrics_post', permission_classes=[IsAuthenticated])
+    def metrics_post(self, request):
+        user_id = request.data.get('user_id')
+        
+        if not user_id:
+            return Response({"error": "user_id es requerido"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Contar proyectos en progreso
+        projects_in_progress = Projects.objects.filter(status='En progreso', responsible_id=user_id).count()
+        
+        # Contar logros desbloqueados
+        unlocked_achievements = UserAchievements.objects.filter(user_id=user_id, unlocked=True).count()
+        
+        # Contar proyectos finalizados
+        completed_projects = Projects.objects.filter(status='Completado', responsible_id=user_id).count()
+        
+        # Contar proyectos en los que el usuario es miembro
+        member_projects = Collaborations.objects.filter(user_id=user_id).values('project').distinct().count()
+        
+        # Contar proyectos donde el usuario es líder
+        leader_projects = Projects.objects.filter(responsible_id=user_id).count()
+
+        # Crear un diccionario con las métricas
+        metrics = {
+            "Proyectos en Progreso": projects_in_progress,
+            "Logros Desbloqueados": unlocked_achievements,
+            "Proyectos Finalizados": completed_projects,
+            "Proyectos en los que eres Miembro": member_projects,
+            "Proyectos como Líder": leader_projects,
+        }
+
+        return Response(metrics, status=status.HTTP_200_OK)
     
 
     
