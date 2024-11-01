@@ -2219,3 +2219,5 @@ class UserAchievementsViewSet(ViewSet):
         return await sync_to_async(list)(Achievements.objects.all())
     
     
+    
+    

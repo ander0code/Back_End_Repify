@@ -131,8 +131,7 @@ class ProjectSerializerAll(adrf.serializers.ModelSerializer):
             'creator_name',
             'collaboration_count'
         ]
-
-    
+  
 class ProjectSerializerID(serializers.ModelSerializer):
     
     creator_name = serializers.SerializerMethodField() 
