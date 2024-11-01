@@ -6,7 +6,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,ProjectUpdateSerializer,CollaboratorSerializer,ProjectSerializer, NotificationSerializer,ProfileSerializer, NotificationSerializerMS, FormSerializer, UserAchievementsSerializer
+from .serializers import LoginSerializer, ProjectSerializerCreate,CustomUserSerializer, ProjectSerializerAll,SolicitudSerializer,ProjectSerializerID,ProjectUpdateSerializer,CollaboratorSerializer,ProjectSerializer, NotificationSerializer,ProfileSerializer, NotificationSerializerMS, FormSerializer, UserAchievementsSerializer, AchievementsSerializer
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
@@ -2148,7 +2148,28 @@ class UserAchievementsViewSet(ViewSet):
 
         return Response(metrics, status=status.HTTP_200_OK)
     
+    @swagger_auto_schema(
+        operation_description="Obtener todos los logros",
+        responses={
+            status.HTTP_200_OK: openapi.Response('Lista de logros', AchievementsSerializer(many=True)),
+            status.HTTP_404_NOT_FOUND: openapi.Response('No se encontraron logros'),
+        },
+        tags=["User Achievements"]
+    )
+    @action(detail=False, methods=['GET'], url_path='all_achievements', permission_classes=[IsAuthenticated])
+    async def get_all_achievements(self, request):
+        # Obtener todos los logros de forma asincrónica
+        achievements = await self.get_achievements()
+        
+        if not achievements:
+            return Response({'detail': 'No se encontraron logros.'}, status=status.HTTP_404_NOT_FOUND)
 
+        # Serializar los logros
+        serializer = AchievementsSerializer(achievements, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    async def get_achievements(self):
+        return await sync_to_async(list)(Achievements.objects.all())
     
     
     
