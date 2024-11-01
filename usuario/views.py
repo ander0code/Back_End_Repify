@@ -778,7 +778,7 @@ class PublicacionViewSet(ViewSet):
             'status': project.status,
             'project_type': project.project_type,
             'priority': project.priority,
-            'responsible': project.responsible.id if project.responsible else None,
+            'responsible': project.responsible_id if project.responsible_id else None,
             'name_uniuser': project.name_uniuser,
             'detailed_description': project.detailed_description,
             'necessary_requirements': project.necessary_requirements,
@@ -806,20 +806,21 @@ class PublicacionViewSet(ViewSet):
         return count
     
     async def get_has_applied(self, user_id, project):
+
         try:
-            project_responsible = await sync_to_async(lambda: project.responsible)()
+            application = await sync_to_async(lambda: Solicitudes.objects.filter(
+                id_user=user_id,
+                id_project=project
+            ).first())()
+
+            if application:
+                if application.status == 'Pendiente':
+                    return True
+                elif application.status == 'Aceptada':
+                    return True
+            return False  # User has not applied
         except Exception:
             return False
-        if project_responsible is not None:
-            try:
-                responsible_user = await sync_to_async(Users.objects.get)(id=project_responsible)
-                if responsible_user and responsible_user.authuser is not None:
-                    responsible_user_id = responsible_user.authuser.id
-                    return responsible_user_id == user_id
-            except Users.DoesNotExist:
-                return False
-            except Exception:
-                return False
     
     @swagger_auto_schema(
         operation_description="Retrieve all projects in ascending order by start date",
