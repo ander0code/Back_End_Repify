@@ -1063,7 +1063,7 @@ class PublicacionViewSet(ViewSet):
     )
     @action(detail=False, methods=['POST'], url_path='Denyproject',permission_classes=[IsAuthenticated])
     async def Denyproject(self, request):
-        solicitud_id = request.data.get('solicitud_id')
+        solicitud_id = request.data.get('id_solicitud')
         user = request.user
         try:
             solicitud = await sync_to_async(Solicitudes.objects.select_related('id_project', 'id_user').get)(id_solicitud=solicitud_id)
