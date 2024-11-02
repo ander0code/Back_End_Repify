@@ -1696,7 +1696,7 @@ class UserAchievementsViewSet(ViewSet):
                     unlocked = Projects.objects.filter(responsible=user.id).count() >= 3
                 elif achievement.id == 5:  # Compromiso sin Fronteras
                     user_instance = Users.objects.get(authuser=user)
-                    unlocked = Collaborations.objects.filter(user=user_instance.id).select_related('project').values('project__responsible__university').distinct().count() >= 3
+                    unlocked = Collaborations.objects.filter(user=user_instance.id).select_related('project__responsible').values('project__responsible__university').distinct().count() >= 3
                 elif achievement.id == 6:  # Multitasker
                     unlocked = Projects.objects.filter(status='En progreso', responsible=user.id).count() >= 3
                 elif achievement.id == 7:  # Colaborador Compulsivo
