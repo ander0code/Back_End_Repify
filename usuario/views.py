@@ -806,8 +806,13 @@ class PublicacionViewSet(ViewSet):
         return count
     
     async def get_has_applied(self, user_id, project):
-
+    
         try:
+    
+            if project.responsible_id == user_id:
+                return True  
+            
+            
             application = await sync_to_async(lambda: Solicitudes.objects.filter(
                 id_user=user_id,
                 id_project=project
