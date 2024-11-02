@@ -73,9 +73,6 @@ class CustomUserSerializer(adrf.serializers.ModelSerializer):
         }
 
 class ProjectSerializerCreate(adrf.serializers.ModelSerializer):
-    creator_name = serializers.SerializerMethodField() 
-    collaboration_count = serializers.SerializerMethodField()  
-    collaborators = serializers.SerializerMethodField()  
     project_type = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     objectives = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
     necessary_requirements = serializers.ListField(child=serializers.CharField(max_length=500), allow_empty=True, allow_null=True)
@@ -97,14 +94,10 @@ class ProjectSerializerCreate(adrf.serializers.ModelSerializer):
             'progress',
             'name_uniuser',
             'accepting_applications',
-            'type_aplyuni',
-            'creator_name', 
-            'collaboration_count',  
-            'collaborators'  
+            'type_aplyuni'
+  
         ]
-        extra_kwargs = {
-            'id': {'read_only': True},
-        }
+
 
 class ProjectSerializerAll(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField()

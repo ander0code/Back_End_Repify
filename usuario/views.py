@@ -532,6 +532,7 @@ class PublicacionViewSet(ViewSet):
 
         try:
             custom_user = await sync_to_async(Users.objects.get)(authuser=responsible_user_id)
+
         except Users.DoesNotExist:
 
             return Response({"error": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
