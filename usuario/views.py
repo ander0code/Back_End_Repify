@@ -941,7 +941,7 @@ class PublicacionViewSet(ViewSet):
 
             # Crear la solicitud
             solicitud_data = {
-                'id_user': user.id,
+                'id_user': user.authuser_id,
                 'name_lider': name_lider,
                 'created_at': timezone.now().strftime('%Y-%m-%d'),
                 'id_project': project.id,
