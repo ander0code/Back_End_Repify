@@ -182,6 +182,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://backend-as-sp-r4hbqw2mzq-uc.a.run.app",
     "http://0.0.0.0:8000",
     "https://main.d15i3gj3zymvi2.amplifyapp.com"
+    
 ]
 
 REST_FRAMEWORK = {
