@@ -1274,17 +1274,19 @@ class PublicacionViewSet(ViewSet):
         user_id = request.user.id  
 
         projects = await sync_to_async(list)(Projects.objects.filter(responsible=user_id))
-
+        
         if projects:
             response_data = []
             for project in projects:
                 collaboratorsall = await sync_to_async(list)(Collaborations.objects.filter(project=project).select_related('user__authuser'))
                 
                 collaborators_info = await self.get_collaborators_info_proyect(collaboratorsall)
-
                 name_responsible = await self.get_responsible_name_proyect(project)
-
                 collaboration_count = await self.get_collaboration_count_proyect(project)
+
+                # Obtener la foto del responsable del proyecto
+                responsible_user = await sync_to_async(Users.objects.get)(id=project.responsible_id)
+                responsible_photo = responsible_user.photo if responsible_user.photo else None
 
                 project_data = {
                     'id': project.id,
@@ -1306,6 +1308,7 @@ class PublicacionViewSet(ViewSet):
                     'name_uniuser': project.name_uniuser,
                     'collaboration_count': collaboration_count,
                     'collaborators': collaborators_info,
+                    'responsible_photo': responsible_photo,  # Agregar la foto del responsable
                 }
                 response_data.append(project_data)
 
@@ -1313,7 +1316,6 @@ class PublicacionViewSet(ViewSet):
         else:
             return Response({"message": "No se encontraron proyectos"}, status=status.HTTP_404_NOT_FOUND)
 
-    #PARA LA CONFIGURACION DEL PROYECTO
     @swagger_auto_schema(
         operation_description="Obtener un proyecto específico pasando el ID del proyecto en el cuerpo de la solicitud",
         request_body=openapi.Schema(
@@ -1345,7 +1347,9 @@ class PublicacionViewSet(ViewSet):
                 name_responsible = await self.get_responsible_name_proyect(projects)
 
                 collaboration_count = await self.get_collaboration_count(projects)
-
+                responsible_user = await sync_to_async(Users.objects.get)(id=projects.responsible_id)
+                responsible_photo = responsible_user.photo if responsible_user.photo else None
+                
                 project_data = {
                     'id': projects.id,
                     'name': projects.name,
@@ -1366,6 +1370,7 @@ class PublicacionViewSet(ViewSet):
                     'name_uniuser': projects.name_uniuser,
                     'collaboration_count': collaboration_count,
                     'collaborators': collaborators_info,
+                    'responsible_photo': responsible_photo, 
                 }
 
                 return Response(project_data, status=status.HTTP_200_OK)
@@ -1400,7 +1405,7 @@ class PublicacionViewSet(ViewSet):
             projects = await sync_to_async(list)(Projects.objects.filter(id__in=project_ids))
 
             if projects:
-    
+
                 response_data = []
                 for project in projects:
                     collaboratorsall = await sync_to_async(list)(Collaborations.objects.filter(project=project).select_related('user__authuser'))
@@ -1410,6 +1415,10 @@ class PublicacionViewSet(ViewSet):
                     name_responsible = await self.get_responsible_name_proyect(project)
 
                     collaboration_count = await self.get_collaboration_count_proyect(project)
+
+                    # Obtener la foto del responsable del proyecto
+                    responsible_user = await sync_to_async(Users.objects.get)(id=project.responsible_id)
+                    responsible_photo = responsible_user.photo.url if responsible_user.photo else None
 
                     project_data = {
                         'id': project.id,
@@ -1431,6 +1440,7 @@ class PublicacionViewSet(ViewSet):
                         'name_uniuser': project.name_uniuser,
                         'collaboration_count': collaboration_count,
                         'collaborators': collaborators_info,
+                        'responsible_photo': responsible_photo,  # Agregar la foto del responsable
                     }
                     response_data.append(project_data)
 
@@ -1788,7 +1798,9 @@ class UserAchievementsViewSet(ViewSet):
     def list_user_achievements(self, request):
         user = request.user
         user_achievements = UserAchievements.objects.filter(user=user.id)
-        user_photo = Users.objects.filter(authuser=user.id).values('photo')
+        
+        # Obtener la foto del usuario
+        user_photo = Users.objects.filter(authuser=user.id).values_list('photo', flat=True).first()
         
         # Serializar los logros del usuario
         achievements_data = [
@@ -1797,7 +1809,6 @@ class UserAchievementsViewSet(ViewSet):
                 "unlocked": achievement.unlocked,
                 "name": achievement.achievement.name,
                 "description": achievement.achievement.description
-                
             }
             for achievement in user_achievements
         ]
@@ -1806,7 +1817,7 @@ class UserAchievementsViewSet(ViewSet):
         response_data = {
             "user": user.id,
             "first_name": user.first_name,
-            "photo":user_photo,   
+            "photo": user_photo,   
             "last_name": user.last_name,
             "achievements": achievements_data
         }
@@ -1853,6 +1864,10 @@ class UserAchievementsViewSet(ViewSet):
             return Response({"error": "Usuario no encontrado."}, status=status.HTTP_400_BAD_REQUEST)
 
         user_achievements = UserAchievements.objects.filter(user=user.id)
+        
+        # Obtener la foto del usuario
+        user_photo = user.photo.url if user.photo else None
+
         # Serializar los logros del usuario
         achievements_data = [
             {
@@ -1860,7 +1875,6 @@ class UserAchievementsViewSet(ViewSet):
                 "unlocked": achievement.unlocked,
                 "name": achievement.achievement.name,
                 "description": achievement.achievement.description
-                
             }
             for achievement in user_achievements
         ]
@@ -1870,6 +1884,7 @@ class UserAchievementsViewSet(ViewSet):
             "user": user.id,
             "first_name": user.authuser.first_name,
             "last_name": user.authuser.last_name,
+            "photo": user_photo,
             "achievements": achievements_data
         }
 
