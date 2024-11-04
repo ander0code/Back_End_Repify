@@ -1418,7 +1418,7 @@ class PublicacionViewSet(ViewSet):
 
                     # Obtener la foto del responsable del proyecto
                     responsible_user = await sync_to_async(Users.objects.get)(id=project.responsible_id)
-                    responsible_photo = responsible_user.photo.url if responsible_user.photo else None
+                    responsible_photo = responsible_user.photo if responsible_user.photo else None
 
                     project_data = {
                         'id': project.id,
