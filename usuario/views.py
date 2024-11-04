@@ -776,6 +776,7 @@ class PublicacionViewSet(ViewSet):
     @action(detail=False, methods=['GET'], url_path='view_project_all', permission_classes=[IsAuthenticated])
     async def view_project_all(self, request):
         try:
+            photo = await sync_to_async(lambda: Users.objects.filter(authuser=request.user.id).first())()
             # Obtener todos los proyectos de forma asíncrona
             projects = await sync_to_async(list)(Projects.objects.all().order_by('-id'))
 
@@ -798,6 +799,7 @@ class PublicacionViewSet(ViewSet):
                     'priority': project.priority,
                     'responsible': project.responsible_id,
                     'name_uniuser': project.name_uniuser,
+                    'photo': photo.photo,
                     'detailed_description': project.detailed_description,
                     'progress': project.progress,
                     'accepting_applications': project.accepting_applications,
@@ -829,6 +831,8 @@ class PublicacionViewSet(ViewSet):
  
         try:
             # Obtener todos los proyectos de forma asíncrona
+            photo = await sync_to_async(lambda: Users.objects.filter(authuser=request.user.id).first())()
+            
             projects = await sync_to_async(list)(Projects.objects.all().order_by('-id')[:3])
 
             project_data = []
@@ -849,6 +853,7 @@ class PublicacionViewSet(ViewSet):
                     'project_type': project.project_type,
                     'priority': project.priority,
                     'responsible': project.responsible_id,
+                    'photo': photo.photo,
                     'name_uniuser': project.name_uniuser,
                     'detailed_description': project.detailed_description,
                     'progress': project.progress,
@@ -1207,15 +1212,20 @@ class PublicacionViewSet(ViewSet):
             return Response({"error": "project_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Verificar si el proyecto existe
             project = await sync_to_async(Projects.objects.get)(id=project_id)
             
-            # Filtrar solicitudes por proyecto
             solicitudes = await sync_to_async(list)(Solicitudes.objects.filter(id_project=project).order_by("-id_solicitud"))
             
             # Serializar las solicitudes
             serializer = await sync_to_async(SolicitudSerializer)(solicitudes, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            solicitudes_data = serializer.data
+
+            # Agregar la foto del usuario a cada solicitud
+            for solicitud in solicitudes_data:
+                user = await sync_to_async(Users.objects.get)(id=solicitud['id_user'])
+                solicitud['photo'] = user.photo.url if user.photo else None
+
+            return Response(solicitudes_data, status=status.HTTP_200_OK)
 
         except Projects.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -1302,7 +1312,6 @@ class PublicacionViewSet(ViewSet):
             return Response(response_data, status=status.HTTP_200_OK)
         else:
             return Response({"message": "No se encontraron proyectos"}, status=status.HTTP_404_NOT_FOUND)
-
 
     #PARA LA CONFIGURACION DEL PROYECTO
     @swagger_auto_schema(
@@ -1453,8 +1462,6 @@ class PublicacionViewSet(ViewSet):
             if authuser:
                 return f"{authuser.first_name} {authuser.last_name}"    
            
-        
-
     @swagger_auto_schema(
         method='delete',
         operation_summary="Delete Collaborator",
@@ -1747,8 +1754,7 @@ class UserAchievementsViewSet(ViewSet):
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
-        
+          
     @swagger_auto_schema(
         operation_description="Obtener todos los logros del usuario",
         responses={
@@ -1782,6 +1788,7 @@ class UserAchievementsViewSet(ViewSet):
     def list_user_achievements(self, request):
         user = request.user
         user_achievements = UserAchievements.objects.filter(user=user.id)
+        user_photo = Users.objects.filter(authuser=user.id).values('photo')
         
         # Serializar los logros del usuario
         achievements_data = [
@@ -1799,6 +1806,7 @@ class UserAchievementsViewSet(ViewSet):
         response_data = {
             "user": user.id,
             "first_name": user.first_name,
+            "photo":user_photo,   
             "last_name": user.last_name,
             "achievements": achievements_data
         }
@@ -1866,9 +1874,6 @@ class UserAchievementsViewSet(ViewSet):
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
-    
-    
-    
     
     @swagger_auto_schema(
         operation_summary="Obtener métricas actuales del usuario",
