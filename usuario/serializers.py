@@ -46,7 +46,7 @@ class LoginSerializer(Serializer):
             'refresh': str(refresh),
             'email': user.email,
             'id': user.id, 
-            'photo' : user.photo ,  
+            'photo' : custom_user.photo ,  
             'university': university_name,
             'career':career_name
         }
@@ -168,7 +168,7 @@ class SolicitudSerializer(adrf.serializers.ModelSerializer):
     
     class Meta:
         model = Solicitudes
-        fields = ["id_solicitud","id_user","id_project","status","name_user","name_lider","message","name_project","created_at"]
+        fields = ["id_solicitud","id_user","photo","id_project","status","name_user","name_lider","message","name_project","created_at"]
 
 class CollaboratorSerializer(adrf.serializers.ModelSerializer):
     class Meta:
