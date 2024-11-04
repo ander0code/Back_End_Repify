@@ -1866,7 +1866,7 @@ class UserAchievementsViewSet(ViewSet):
         user_achievements = UserAchievements.objects.filter(user=user.id)
         
         # Obtener la foto del usuario
-        user_photo = user.photo.url if user.photo else None
+        user_photo = user.photo if user.photo else None
 
         # Serializar los logros del usuario
         achievements_data = [
