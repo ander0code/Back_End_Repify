@@ -45,7 +45,8 @@ class LoginSerializer(Serializer):
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'email': user.email,
-            'id': user.id,  
+            'id': user.id, 
+            'photo' : user.photo ,  
             'university': university_name,
             'career':career_name
         }
