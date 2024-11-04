@@ -1217,7 +1217,7 @@ class PublicacionViewSet(ViewSet):
             solicitudes = await sync_to_async(list)(Solicitudes.objects.filter(id_project=project).order_by("-id_solicitud"))
             
             # Serializar las solicitudes
-            serializer = await sync_to_async(SolicitudSerializer)(solicitudes, many=True)
+            serializer = SolicitudSerializer(solicitudes, many=True)
             solicitudes_data = serializer.data
 
             # Agregar la foto del usuario a cada solicitud
