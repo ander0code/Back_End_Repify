@@ -1223,7 +1223,7 @@ class PublicacionViewSet(ViewSet):
             # Agregar la foto del usuario a cada solicitud
             for solicitud in solicitudes_data:
                 user = await sync_to_async(Users.objects.get)(id=solicitud['id_user'])
-                solicitud['photo'] = user.photo.url if user.photo else None
+                solicitud['photo'] = user.photo if user.photo else None
 
             return Response(solicitudes_data, status=status.HTTP_200_OK)
 
