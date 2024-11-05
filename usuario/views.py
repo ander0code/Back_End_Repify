@@ -321,7 +321,7 @@ class PerfilViewSet(ViewSet):
 
         try:
             user_profile = await sync_to_async(Users.objects.get)(authuser_id=user_id)
-            auth_user = request.user
+            auth_user =  await sync_to_async(User.objects.get)(id=user_id)
 
             # Reunir los datos para serializar
             profile_data = {
