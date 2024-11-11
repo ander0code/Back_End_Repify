@@ -5,6 +5,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Users, Projects , Collaborations, Solicitudes, Notifications, Forms, Achievements, UserAchievements  # Asegúrate de tener bien definido tu modelo de Usuarios
 from .models import Users, Projects , Collaborations, Solicitudes  
 from rest_framework import serializers
+from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -35,13 +36,19 @@ class LoginSerializer(Serializer):
             career_name = custom_user.career  
         except Users.DoesNotExist:
             career_name = None  
+            
+        try:
+            name = User.objects.get(email=user)
+            full_name = name.first_name + " " + name.last_name
+        except User.DoesNotExist:
+            full_name = None  
 
         # Retornar los tokens y los datos del usuario, incluyendo el ID
         return {
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'email': user.email,
-            'name'
+            'name': full_name,
             'id': user.id, 
             'photo' : custom_user.photo ,  
             'university': university_name,
