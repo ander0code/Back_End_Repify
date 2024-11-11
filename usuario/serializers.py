@@ -171,7 +171,7 @@ class SolicitudSerializer(adrf.serializers.ModelSerializer):
     
     class Meta:
         model = Solicitudes
-        fields = ["id_solicitud","id_user","id_project","status","name_user","name_lider","message","name_project","created_at"]
+        fields = ["id_solicitud","id_user","id_project","status","name_user","name_lider","message","photo","name_project","created_at"]
 
 class CollaboratorSerializer(adrf.serializers.ModelSerializer):
     class Meta:
