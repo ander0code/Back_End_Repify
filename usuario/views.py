@@ -1082,6 +1082,27 @@ class ProjectViewSet(ViewSet): #(Projects Management)
         else:
             return Response({"message": "No se encontraron proyectos"}, status=status.HTTP_404_NOT_FOUND)
         
+    async def get_collaboration_count_proyect(self, project):
+        return await sync_to_async(lambda: Collaborations.objects.filter(project=project).count())()
+
+    async def get_collaborators_info_proyect(self, collaborators):
+        collaborator_info = []
+        for collab in collaborators:
+            if collab.user and collab.user.authuser:
+                user_info = {
+                    "id": collab.user.id,
+                    "name": f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
+                }
+                collaborator_info.append(user_info)
+        return collaborator_info
+
+    async def get_responsible_name_proyect(self, obj):
+        
+        if obj.responsible_id: 
+            authuser = await sync_to_async(User.objects.get)(id=obj.responsible_id)
+            if authuser:
+                return f"{authuser.first_name} {authuser.last_name}"    
+        
 class FormsViewSet(ViewSet): #(Form Management) 
     @swagger_auto_schema(
         operation_description="Crear un nuevo formulario",
