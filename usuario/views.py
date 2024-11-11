@@ -739,6 +739,7 @@ class ProjectViewSet(ViewSet): #(Projects Management)
 
         creator_name = await self.get_creator_name_view_project_id(project)
         collaboration_count = await self.get_collaboration_count_view_project_id(project)
+        responsible_user = await sync_to_async(lambda: Users.objects.filter(id=project.responsible_id).first())()
         has_applied = await self.get_has_applied(user_id, project)
 
         response_data = {
@@ -753,6 +754,7 @@ class ProjectViewSet(ViewSet): #(Projects Management)
             'responsible': project.responsible_id if project.responsible_id else None,
             'name_uniuser': project.name_uniuser,
             'detailed_description': project.detailed_description,
+            'photo': responsible_user.photo,
             'necessary_requirements': project.necessary_requirements,
             'progress': project.progress,
             'objectives': project.objectives,
@@ -813,7 +815,6 @@ class ProjectViewSet(ViewSet): #(Projects Management)
     @action(detail=False, methods=['GET'], url_path='view_project_all', permission_classes=[IsAuthenticated])
     async def view_project_all(self, request):
         try:
-            photo = await sync_to_async(lambda: Users.objects.filter(authuser=request.user.id).first())()
             # Obtener todos los proyectos de forma asíncrona
             projects = await sync_to_async(list)(Projects.objects.all().order_by('-id'))
 
@@ -821,7 +822,7 @@ class ProjectViewSet(ViewSet): #(Projects Management)
             for project in projects:
                 # Obtiene el nombre del creador y el conteo de colaboraciones de forma asíncrona
                 creator_name = await self.get_creator_name(project)
-
+                responsible_user = await sync_to_async(lambda: Users.objects.filter(id=project.responsible_id).first())()
                 collaboration_count = await self.get_collaboration_count(project)
 
                 # Agrega los datos al diccionario
@@ -836,7 +837,7 @@ class ProjectViewSet(ViewSet): #(Projects Management)
                     'priority': project.priority,
                     'responsible': project.responsible_id,
                     'name_uniuser': project.name_uniuser,
-                    'photo': photo.photo,
+                    'photo': responsible_user.photo,
                     'detailed_description': project.detailed_description,
                     'progress': project.progress,
                     'accepting_applications': project.accepting_applications,
@@ -868,15 +869,14 @@ class ProjectViewSet(ViewSet): #(Projects Management)
  
         try:
             # Obtener todos los proyectos de forma asíncrona
-            photo = await sync_to_async(lambda: Users.objects.filter(authuser=request.user.id).first())()
-            
+ 
             projects = await sync_to_async(list)(Projects.objects.all().order_by('-id')[:3])
 
             project_data = []
             for project in projects:
                 # Obtiene el nombre del creador y el conteo de colaboraciones de forma asíncrona
                 creator_name = await self.get_creator_name(project)
-
+                responsible_user = await sync_to_async(lambda: Users.objects.filter(id=project.responsible_id).first())()
                 collaboration_count = await self.get_collaboration_count(project)
 
                 # Agrega los datos al diccionario
@@ -890,7 +890,7 @@ class ProjectViewSet(ViewSet): #(Projects Management)
                     'project_type': project.project_type,
                     'priority': project.priority,
                     'responsible': project.responsible_id,
-                    'photo': photo.photo,
+                    'photo': responsible_user.photo,
                     'name_uniuser': project.name_uniuser,
                     'detailed_description': project.detailed_description,
                     'progress': project.progress,
@@ -1052,8 +1052,8 @@ class ProjectViewSet(ViewSet): #(Projects Management)
                 name_responsible = await self.get_responsible_name_proyect(projects)
 
                 collaboration_count = await self.get_collaboration_count(projects)
-                responsible_user = await sync_to_async(Users.objects.get)(id=projects.responsible_id)
-                responsible_photo = responsible_user.photo if responsible_user.photo else None
+
+                responsible_photo = await sync_to_async(lambda: Users.objects.filter(id=projects.responsible_id).first())()
                 
                 project_data = {
                     'id': projects.id,
@@ -1075,7 +1075,7 @@ class ProjectViewSet(ViewSet): #(Projects Management)
                     'name_uniuser': projects.name_uniuser,
                     'collaboration_count': collaboration_count,
                     'collaborators': collaborators_info,
-                    'responsible_photo': responsible_photo, 
+                    'responsible_photo': responsible_photo.photo, 
                 }
 
                 return Response(project_data, status=status.HTTP_200_OK)
@@ -1585,6 +1585,8 @@ class ApplicationsViewSet(ViewSet): #(Applications Management)
                 lider_id = project.responsible_id  
                 
                 lider = await sync_to_async(User.objects.get)(id=lider_id)  
+                
+                photo = await sync_to_async(lambda: Users.objects.filter(id = user.id).first())()
 
                 name_lider = f"{lider.first_name} {lider.last_name}"
 
@@ -1596,6 +1598,7 @@ class ApplicationsViewSet(ViewSet): #(Applications Management)
                     'id_project': project.id,
                     "message" : message,
                     'status': 'Pendiente',
+                    'photo' : photo.photo,
                     'name_project': project.name,
                     'name_user': f"{user.first_name} {user.last_name}",
                 }
@@ -2294,9 +2297,12 @@ class MetricsViewSet(ViewSet): #(Metrics Management)
         
         # Contar proyectos donde el usuario es líder
         leader_projects = Projects.objects.filter(responsible_id=user_id).count()
+        
+        photo =  Users.objects.filter(authuser_id=user_id).first()
 
         # Crear un diccionario con las métricas
         metrics = {
+            "photo" : photo.photo,
             "proyectos_en_progreso": projects_in_progress,
             "logros_pesbloqueados": unlocked_achievements,
             "proyectos_finalizados": completed_projects,
