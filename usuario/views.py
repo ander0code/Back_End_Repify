@@ -1089,8 +1089,12 @@ class ProjectViewSet(ViewSet): #(Projects Management)
         collaborator_info = []
         for collab in collaborators:
             if collab.user and collab.user.authuser:
+                
+                photo = await sync_to_async(lambda: Users.objects.filter(id=collab.user.authuser.id).first())()
+                
                 user_info = {
                     "id": collab.user.id,
+                    "photo" : photo.photo,
                     "name": f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
                 }
                 collaborator_info.append(user_info)
@@ -2112,8 +2116,10 @@ class CollaboratorsViewSet(ViewSet): #(Collaborators Management)
         collaborator_info = []
         for collab in collaborators:
             if collab.user and collab.user.authuser:
+                photo = await sync_to_async(lambda: Users.objects.filter(id=collab.user.authuser.id).first())()
                 user_info = {
                     "id": collab.user.id,
+                    "photo" : photo.photo,
                     "name": f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
                 }
                 collaborator_info.append(user_info)
