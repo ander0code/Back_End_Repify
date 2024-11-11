@@ -47,7 +47,8 @@ class LoginSerializer(Serializer):
             'email': user.email,
             'id': user.id,  
             'university': university_name,
-            'career':career_name
+            'career':career_name,
+            'photo':Users.photo
         }
 
 class CustomUserSerializer(adrf.serializers.ModelSerializer):

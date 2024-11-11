@@ -703,6 +703,12 @@ class PublicacionViewSet(ViewSet):
         creator_name = await self.get_creator_name_view_project_id(project)
         collaboration_count = await self.get_collaboration_count_view_project_id(project)
         has_applied = await self.get_has_applied(user_id, project)
+        
+        #esto no se si funciona lo de photo, eliminalo si no sirve
+        photo = None
+        if project.responsible_id:
+            responsible_user = await sync_to_async(Users.objects.get)(id=project.responsible_id)
+            photo = responsible_user.photo.url if responsible_user.photo else None
 
         response_data = {
             'id': project.id,
@@ -724,6 +730,7 @@ class PublicacionViewSet(ViewSet):
             'creator_name': creator_name,
             'collaboration_count': collaboration_count,
             'has_applied': has_applied,
+            'photo': photo,#no se si funciona eliminalo si no sirve.
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
@@ -855,7 +862,7 @@ class PublicacionViewSet(ViewSet):
                     'accepting_applications': project.accepting_applications,
                     'type_aplyuni': project.type_aplyuni,
                     'creator_name': creator_name,
-                    'collaboration_count': collaboration_count,
+                    'collaboration_count': collaboration_count
                 }
                 project_data.append(project_dict)
 
@@ -941,7 +948,7 @@ class PublicacionViewSet(ViewSet):
 
             # Crear la solicitud
             solicitud_data = {
-                'id_user': user.authuser_id,
+                'id_user': user.id,
                 'name_lider': name_lider,
                 'created_at': timezone.now().strftime('%Y-%m-%d'),
                 'id_project': project.id,
