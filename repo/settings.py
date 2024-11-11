@@ -181,7 +181,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://172.22.0.1:3000",
     "https://backend-as-sp-r4hbqw2mzq-uc.a.run.app",
     "http://0.0.0.0:8000",
-    "https://main.d15i3gj3zymvi2.amplifyapp.com"
+    "https://main.d15i3gj3zymvi2.amplifyapp.com", "https://www.repify.fun",
+"https://repify.fun"
     
 ]
 
