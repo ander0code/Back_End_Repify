@@ -65,7 +65,7 @@ class Solicitudes(models.Model):
     status = models.TextField()
     message = models.TextField(blank=True, null=True)
     name_user = models.TextField(blank=True, null=True)
-    photo = models.TextField()
+    photo = models.TextField(blank=True, null=True)
     name_lider = models.TextField(blank=True, null=True)
     name_project = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
