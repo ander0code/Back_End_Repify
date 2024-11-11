@@ -53,7 +53,6 @@ class LoginSerializer(Serializer):
             'photo' : custom_user.photo ,  
             'university': university_name,
             'career':career_name,
-            'photo':Users.photo
         }
 
 class CustomUserSerializer(adrf.serializers.ModelSerializer):
