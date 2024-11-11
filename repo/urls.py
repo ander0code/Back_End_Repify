@@ -25,7 +25,7 @@ schema_view = get_schema_view(
    openapi.Info(
       title="Repify App",
       default_version='v1',
-      description="Test description",
+      description="Backn End API for Repify",
       terms_of_service="https://www.google.com/policies/terms/",
       contact=openapi.Contact(email="maxxd814@gmail.com"),
       license=openapi.License(name="BSD License"),
