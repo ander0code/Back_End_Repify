@@ -100,7 +100,7 @@ WSGI_APPLICATION = 'repo.wsgi.application'
 DATABASES = {
     'default': dj_database_url.config(
         default=os.getenv('DATABASE_URL'),
-        conn_max_age=600  # Opcional
+        conn_max_age=600  
     )
 }
 
@@ -154,7 +154,7 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=20),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,  # Enable token blacklisting
+    'BLACKLIST_AFTER_ROTATION': True,  
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
     'AUTH_HEADER_TYPES': ('Bearer',),
@@ -164,7 +164,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'ttitokevin5@gmail.com'  # Tu dirección de correo de Gmail
+EMAIL_HOST_USER = 'ttitokevin5@gmail.com'  
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 
 CORS_ALLOW_CREDENTIALS = True
@@ -191,18 +191,14 @@ REST_FRAMEWORK = {
     ),
 }
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'loggers': {
-        '': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-        },
-    },
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False,
+    'PERSIST_AUTH': True,
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    }
 }

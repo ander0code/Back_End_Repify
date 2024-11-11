@@ -1,12 +1,8 @@
 from django.contrib.auth import authenticate
-from django.contrib.auth.models import User
 import adrf
 from adrf.serializers import Serializer
-from asgiref.sync import sync_to_async
-
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Users, Projects , Collaborations, Solicitudes, Notifications, Forms, Achievements, UserAchievements  # Asegúrate de tener bien definido tu modelo de Usuarios
-
 from .models import Users, Projects , Collaborations, Solicitudes  
 from rest_framework import serializers
 from django.contrib.auth import authenticate
@@ -99,7 +95,6 @@ class ProjectSerializerCreate(adrf.serializers.ModelSerializer):
             'type_aplyuni'
   
         ]
-
 
 class ProjectSerializerAll(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField()
@@ -252,7 +247,7 @@ class ProfileSerializer(adrf.serializers.ModelSerializer):
     class Meta:
         model = Users
         fields = ['university', 'career', 'cycle', 'biography','interests','photo', 'achievements', 'created_at', 
-                  'email', 'first_name', 'last_name', 'date_joined']
+                  'email', 'first_name', 'last_name', 'date_joined'] #11
 
 class FormSerializer(adrf.serializers.ModelSerializer):
 
