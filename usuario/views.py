@@ -14,15 +14,13 @@ from django.shortcuts import get_object_or_404
 from usuario.models import Users,Projects,Solicitudes,Collaborations, Notifications, Forms, Achievements, UserAchievements
 from rest_framework.permissions import AllowAny ,IsAuthenticated
 import random
-import logging
-logger = logging.getLogger('your_app_name')  # Cambia esto por el nombre de tu aplicación
 
 from asgiref.sync import sync_to_async
 
-class LoginViewSet(ViewSet):
+class LoginViewSet(ViewSet): #(User Management)
     
     @swagger_auto_schema(
-        operation_description="User login",
+        operation_summary="Logearse como usuario y obtener tokens JWT",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             required=['email', 'password'],
@@ -62,6 +60,7 @@ class LoginViewSet(ViewSet):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
     @swagger_auto_schema(
+        operation_summary="Registrarse y logearse como usuario y obtener tokens JWT",
         operation_description="Register a new user and return JWT tokens",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
@@ -153,7 +152,8 @@ class LoginViewSet(ViewSet):
         return Response(users_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     @swagger_auto_schema(
-            operation_description="Request a password reset code",
+        operation_summary="recuperar y crear la contraseña nueva del usuario",
+            operation_description="Nos permite recuperar la contraseña del usuario y crear una nueva contraseña mediante el email registrado",
             request_body=openapi.Schema(
                 type=openapi.TYPE_OBJECT,
                 required=['email'],
@@ -300,12 +300,12 @@ class LoginViewSet(ViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
  
-class PerfilViewSet(ViewSet):
+class PerfilViewSet(ViewSet): #(Profile Management)
     
     @swagger_auto_schema(
         method='post',
-        operation_summary="Retrieve Profile Data",
-        operation_description="Retrieve the profile data of the authenticated user.",
+        operation_summary="Traer los datos del usuario",
+        operation_description="trae los datos del usuario logeado",
         responses={
             200: openapi.Response(
                 description="Successful response with user profile data.",
@@ -321,7 +321,7 @@ class PerfilViewSet(ViewSet):
 
         try:
             user_profile = await sync_to_async(Users.objects.get)(authuser_id=user_id)
-            auth_user = request.user
+            auth_user =  await sync_to_async(User.objects.get)(id=user_id)
 
             # Reunir los datos para serializar
             profile_data = {
@@ -346,7 +346,44 @@ class PerfilViewSet(ViewSet):
         except Users.DoesNotExist:
             return Response({"error": "User profile not found"}, status=404)
 
-
+    @swagger_auto_schema(
+        method='post',
+        operation_summary="Traer los datos del usuario por id",
+        operation_description="trae los datos del usuario por id",
+        request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['user_id'],
+        properties={
+                'user_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the user'),
+            },
+        ),
+        responses={
+            200: openapi.Response(
+                description='Profile data retrieved successfully',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'university': openapi.Schema(type=openapi.TYPE_STRING, description='University of the user'),
+                        'career': openapi.Schema(type=openapi.TYPE_STRING, description='Career of the user'),
+                        'cycle': openapi.Schema(type=openapi.TYPE_STRING, description='Current cycle of the user'),
+                        'biography': openapi.Schema(type=openapi.TYPE_STRING, description='Biography of the user'),
+                        'interests': openapi.Schema(type=openapi.TYPE_STRING, description='Interests of the user'),
+                        'photo': openapi.Schema(type=openapi.TYPE_STRING, format='uri', description='Profile photo URL'),
+                        'achievements': openapi.Schema(type=openapi.TYPE_STRING, description='Achievements of the user'),
+                        'created_at': openapi.Schema(type=openapi.TYPE_STRING, format='date-time', description='Profile creation date'),
+                        'email': openapi.Schema(type=openapi.TYPE_STRING, description='Email of the user'),
+                        'first_name': openapi.Schema(type=openapi.TYPE_STRING, description='First name of the user'),
+                        'last_name': openapi.Schema(type=openapi.TYPE_STRING, description='Last name of the user'),
+                        'date_joined': openapi.Schema(type=openapi.TYPE_STRING, format='date-time', description='Date when the user joined'),
+                    }
+                )
+            ),
+            404: openapi.Response(description='User profile not found'),
+            400: openapi.Response(description='Invalid request'),
+        },
+        
+        tags = ["Profile Management"]
+    )
     @action(detail=False, methods=['POST'], url_path='profile_id', permission_classes=[IsAuthenticated])
     async def profile_data_id(self, request):
         
@@ -445,7 +482,7 @@ class PerfilViewSet(ViewSet):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class PublicacionViewSet(ViewSet):
+class ProjectViewSet(ViewSet): #(Projects Management)
      
     @swagger_auto_schema(
         operation_description="Create a new project",
@@ -524,9 +561,9 @@ class PublicacionViewSet(ViewSet):
             ),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid input data'),
         },
-        tags=["CRUD Project Management"]
+        tags=["Projects Management"]
     )
-    @action(detail=False, methods=['POST'], url_path='create_proyect', permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['POST'], url_path='create_project', permission_classes=[IsAuthenticated])
     async def create_project(self, request):
         responsible_user_id = request.user.id
 
@@ -618,9 +655,9 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_404_NOT_FOUND: openapi.Response('Proyecto no encontrado'),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Datos inválidos'),
         },
-        tags=["CRUD Project Management"]
+        tags=["Projects Management"]
     )
-    @action(detail=False, methods=['PUT'], url_path='update-project', permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['PUT'], url_path='update_project', permission_classes=[IsAuthenticated])
     async def update_project(self, request):
 
         project_id = request.data.get('project_id')
@@ -652,7 +689,7 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_204_NO_CONTENT: openapi.Response('Project deleted successfully'),
             status.HTTP_404_NOT_FOUND: openapi.Response('Project not found'),
         },
-        tags=["CRUD Project Management"]
+        tags=["Projects Management"]
     )
     @action(detail=False, methods=['delete'], url_path='delete_project', permission_classes=[IsAuthenticated])
     async def delete_project(self, request):
@@ -682,7 +719,7 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_404_NOT_FOUND: openapi.Response('Project not found'),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid input data'),
         },
-        tags=["CRUD Project Management"]
+        tags=["Projects Management"]
     )
     @action(detail=False, methods=['POST'], url_path='view_project_id', permission_classes=[IsAuthenticated])
     async def view_project_id(self, request):
@@ -702,6 +739,7 @@ class PublicacionViewSet(ViewSet):
 
         creator_name = await self.get_creator_name_view_project_id(project)
         collaboration_count = await self.get_collaboration_count_view_project_id(project)
+        responsible_user = await sync_to_async(lambda: Users.objects.filter(id=project.responsible_id).first())()
         has_applied = await self.get_has_applied(user_id, project)
         
         #esto no se si funciona lo de photo, eliminalo si no sirve
@@ -722,6 +760,7 @@ class PublicacionViewSet(ViewSet):
             'responsible': project.responsible_id if project.responsible_id else None,
             'name_uniuser': project.name_uniuser,
             'detailed_description': project.detailed_description,
+            'photo': responsible_user.photo,
             'necessary_requirements': project.necessary_requirements,
             'progress': project.progress,
             'objectives': project.objectives,
@@ -778,7 +817,7 @@ class PublicacionViewSet(ViewSet):
             ),
             status.HTTP_400_BAD_REQUEST: "Invalid request",
         },
-        tags=["CRUD Project Management"]
+        tags=["Projects Management"]
     )
     @action(detail=False, methods=['GET'], url_path='view_project_all', permission_classes=[IsAuthenticated])
     async def view_project_all(self, request):
@@ -790,7 +829,7 @@ class PublicacionViewSet(ViewSet):
             for project in projects:
                 # Obtiene el nombre del creador y el conteo de colaboraciones de forma asíncrona
                 creator_name = await self.get_creator_name(project)
-
+                responsible_user = await sync_to_async(lambda: Users.objects.filter(id=project.responsible_id).first())()
                 collaboration_count = await self.get_collaboration_count(project)
 
                 # Agrega los datos al diccionario
@@ -805,6 +844,7 @@ class PublicacionViewSet(ViewSet):
                     'priority': project.priority,
                     'responsible': project.responsible_id,
                     'name_uniuser': project.name_uniuser,
+                    'photo': responsible_user.photo,
                     'detailed_description': project.detailed_description,
                     'progress': project.progress,
                     'accepting_applications': project.accepting_applications,
@@ -829,20 +869,21 @@ class PublicacionViewSet(ViewSet):
             ),
             status.HTTP_400_BAD_REQUEST: "Invalid request",
         },
-        tags=["CRUD Project Management"]
+        tags=["Projects Management"]
     )
     @action(detail=False, methods=['GET'], url_path='view_recent_projects', permission_classes=[IsAuthenticated])
     async def view_recent_projects(self, request):
  
         try:
             # Obtener todos los proyectos de forma asíncrona
+ 
             projects = await sync_to_async(list)(Projects.objects.all().order_by('-id')[:3])
 
             project_data = []
             for project in projects:
                 # Obtiene el nombre del creador y el conteo de colaboraciones de forma asíncrona
                 creator_name = await self.get_creator_name(project)
-
+                responsible_user = await sync_to_async(lambda: Users.objects.filter(id=project.responsible_id).first())()
                 collaboration_count = await self.get_collaboration_count(project)
 
                 # Agrega los datos al diccionario
@@ -856,6 +897,7 @@ class PublicacionViewSet(ViewSet):
                     'project_type': project.project_type,
                     'priority': project.priority,
                     'responsible': project.responsible_id,
+                    'photo': responsible_user.photo,
                     'name_uniuser': project.name_uniuser,
                     'detailed_description': project.detailed_description,
                     'progress': project.progress,
@@ -882,49 +924,64 @@ class PublicacionViewSet(ViewSet):
     async def get_collaboration_count(self, obj):
         count = await sync_to_async(Collaborations.objects.filter(project=obj).count)()
         return count
-                   
-           
+
     @swagger_auto_schema(
-        operation_description="Aplicar a un proyecto",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['project_id'],
-            properties={
-                'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto'),
-                
-            }
-        ),
+        operation_summary="Obtener proyectos creados por el usuario autenticado",
+        operation_description="Recupera todos los proyectos creados por el usuario autenticado.",
         responses={
-            status.HTTP_201_CREATED: openapi.Response(
-                'Solicitud y notificación creadas exitosamente',
+            status.HTTP_200_OK: openapi.Response(
+                'Lista de proyectos creados por el usuario',
+                openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto'),
+                            'name': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del proyecto'),
+                            'description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción del proyecto'),
+                            'start_date': openapi.Schema(type=openapi.TYPE_STRING, format='date', description='Fecha de inicio del proyecto'),
+                            'end_date': openapi.Schema(type=openapi.TYPE_STRING, format='date', description='Fecha de finalización del proyecto'),
+                            'status': openapi.Schema(type=openapi.TYPE_STRING, description='Estado del proyecto'),
+                            'project_type': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de proyecto'),
+                            'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Prioridad del proyecto'),
+                            'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del responsable del proyecto'),
+                            'name_responsible': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del responsable del proyecto'),
+                            'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción detallada del proyecto'),
+                            'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='Tipo de aplicación universitaria'),
+                            'objectives': openapi.Schema(type=openapi.TYPE_STRING, description='Objetivos del proyecto'),
+                            'necessary_requirements': openapi.Schema(type=openapi.TYPE_STRING, description='Requisitos necesarios para el proyecto'),
+                            'progress': openapi.Schema(type=openapi.TYPE_STRING, description='Progreso del proyecto'),
+                            'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Si el proyecto está aceptando aplicaciones'),
+                            'name_uniuser': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del usuario universitario'),
+                            'collaboration_count': openapi.Schema(type=openapi.TYPE_INTEGER, description='Número de colaboraciones en el proyecto'),
+                            'collaborators': openapi.Schema(
+                                type=openapi.TYPE_ARRAY,
+                                items=openapi.Schema(
+                                    type=openapi.TYPE_OBJECT,
+                                    properties={
+                                        'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del colaborador'),
+                                        'name': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del colaborador')
+                                    }
+                                )
+                            ),
+                            'responsible_photo': openapi.Schema(type=openapi.TYPE_STRING, description='Foto del responsable del proyecto')
+                        }
+                    )
+                )
+            ),
+            status.HTTP_404_NOT_FOUND: openapi.Response(
+                'No se encontraron proyectos',
                 openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
-                        'solicitud': openapi.Schema(
-                            type=openapi.TYPE_OBJECT,
-                            properties={
-                                'id_user': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario que aplicó'),
-                                'id_project': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto'),
-                                'status': openapi.Schema(type=openapi.TYPE_STRING, description='Estado de la solicitud'),
-                            }
-                        ),
-                        'notificación': openapi.Schema(
-                            type=openapi.TYPE_OBJECT,
-                            properties={
-                                'user': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario que recibe la notificación'),
-                                'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de la notificación'),
-                                'is_read': openapi.Schema(type=openapi.TYPE_INTEGER, description='Estado de lectura de la notificación (0 o 1)'),
-                                'created_at': openapi.Schema(type=openapi.TYPE_STRING, format='date-time', description='Fecha de creación de la notificación'),
-                            }
-                        )
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error')
                     }
                 )
             ),
-            status.HTTP_400_BAD_REQUEST: openapi.Response('Error en los datos proporcionados'),
-            status.HTTP_404_NOT_FOUND: openapi.Response('Proyecto no encontrado'),
         },
-        tags=["Notificacions Project Management"]
+        tags=["Projects Management"]
     )
+<<<<<<< HEAD
     @action(detail=False, methods=['POST'], url_path='ApplyProject', permission_classes=[IsAuthenticated])
     async def ApplyProject(self, request):
         project_id = request.data.get('project_id')
@@ -1268,20 +1325,26 @@ class PublicacionViewSet(ViewSet):
     )
     @action(detail=False, methods=['GET'], url_path='my-projects', permission_classes=[IsAuthenticated])
     async def view_project_usercreator(self, request):
+=======
+    @action(detail=False, methods=['GET'], url_path='get_user_created_projects', permission_classes=[IsAuthenticated])
+    async def get_user_created_projects(self, request):
+>>>>>>> dccca986f1b595be05a2143363dfd7bd78ccffde
         user_id = request.user.id  
 
         projects = await sync_to_async(list)(Projects.objects.filter(responsible=user_id))
-
+        
         if projects:
             response_data = []
             for project in projects:
                 collaboratorsall = await sync_to_async(list)(Collaborations.objects.filter(project=project).select_related('user__authuser'))
                 
                 collaborators_info = await self.get_collaborators_info_proyect(collaboratorsall)
-
                 name_responsible = await self.get_responsible_name_proyect(project)
-
                 collaboration_count = await self.get_collaboration_count_proyect(project)
+
+                # Obtener la foto del responsable del proyecto
+                responsible_user = await sync_to_async(Users.objects.get)(id=project.responsible_id)
+                responsible_photo = responsible_user.photo if responsible_user.photo else None
 
                 project_data = {
                     'id': project.id,
@@ -1303,6 +1366,7 @@ class PublicacionViewSet(ViewSet):
                     'name_uniuser': project.name_uniuser,
                     'collaboration_count': collaboration_count,
                     'collaborators': collaborators_info,
+                    'responsible_photo': responsible_photo,  # Agregar la foto del responsable
                 }
                 response_data.append(project_data)
 
@@ -1310,8 +1374,6 @@ class PublicacionViewSet(ViewSet):
         else:
             return Response({"message": "No se encontraron proyectos"}, status=status.HTTP_404_NOT_FOUND)
 
-
-    #PARA LA CONFIGURACION DEL PROYECTO
     @swagger_auto_schema(
         operation_description="Obtener un proyecto específico pasando el ID del proyecto en el cuerpo de la solicitud",
         request_body=openapi.Schema(
@@ -1325,7 +1387,7 @@ class PublicacionViewSet(ViewSet):
             status.HTTP_200_OK: openapi.Response('Proyecto encontrado'),
             status.HTTP_404_NOT_FOUND: openapi.Response('Proyecto no encontrado'),
         },
-        tags=["CRUD Project Management"]
+        tags=["Projects Management"]
     )
     @action(detail=False, methods=['POST'], url_path='get-project-id', permission_classes=[IsAuthenticated])
     async def get_project_id(self, request):
@@ -1344,6 +1406,8 @@ class PublicacionViewSet(ViewSet):
 
                 collaboration_count = await self.get_collaboration_count(projects)
 
+                responsible_photo = await sync_to_async(lambda: Users.objects.filter(id=projects.responsible_id).first())()
+                
                 project_data = {
                     'id': projects.id,
                     'name': projects.name,
@@ -1364,80 +1428,12 @@ class PublicacionViewSet(ViewSet):
                     'name_uniuser': projects.name_uniuser,
                     'collaboration_count': collaboration_count,
                     'collaborators': collaborators_info,
+                    'responsible_photo': responsible_photo.photo, 
                 }
 
                 return Response(project_data, status=status.HTTP_200_OK)
         else:
             return Response({"message": "No se encontraron proyectos"}, status=status.HTTP_404_NOT_FOUND)
-        
-    @swagger_auto_schema(
-        method='get',
-        operation_summary="Retrieve Collaborated Projects",
-        operation_description="Retrieve the list of projects the authenticated user has collaborated on.",
-        responses={
-            200: openapi.Response(
-                description="Successful response with list of projects.",
-                schema=ProjectSerializer(many=True)
-            ),
-            404: openapi.Response(description="No projects found for the collaborations.")
-        },
-        tags=["Collab Management"]
-    )
-    @action(detail=False, methods=['GET'], url_path='my-collaborated-projects', permission_classes=[IsAuthenticated])
-    async def view_project_usercollab(self, request):
-        # Obtener la instancia del usuario autenticado
-        user_instance = request.user.id  # Ajusta esto si tu relación es diferente
-
-        # Filtrar colaboraciones del usuario de forma asíncrona
-        collaborations = await sync_to_async(list)(Collaborations.objects.filter(user=user_instance))
-
-        # Obtener los proyectos relacionados a las colaboraciones de forma asíncrona
-        if collaborations:
-            
-            project_ids = await sync_to_async(lambda: [collab.project_id for collab in collaborations])()
-            projects = await sync_to_async(list)(Projects.objects.filter(id__in=project_ids))
-
-            if projects:
-    
-                response_data = []
-                for project in projects:
-                    collaboratorsall = await sync_to_async(list)(Collaborations.objects.filter(project=project).select_related('user__authuser'))
-                    
-                    collaborators_info = await self.get_collaborators_info_proyect(collaboratorsall)
-
-                    name_responsible = await self.get_responsible_name_proyect(project)
-
-                    collaboration_count = await self.get_collaboration_count_proyect(project)
-
-                    project_data = {
-                        'id': project.id,
-                        'name': project.name,
-                        'description': project.description,
-                        'start_date': project.start_date,
-                        'end_date': project.end_date,
-                        'status': project.status,
-                        'project_type': project.project_type,
-                        'priority': project.priority,
-                        'responsible': project.responsible_id,  
-                        'name_responsible': name_responsible,
-                        'detailed_description': project.detailed_description,
-                        'type_aplyuni': project.type_aplyuni,
-                        'objectives': project.objectives,
-                        'necessary_requirements': project.necessary_requirements,
-                        'progress': project.progress,
-                        'accepting_applications': project.accepting_applications,
-                        'name_uniuser': project.name_uniuser,
-                        'collaboration_count': collaboration_count,
-                        'collaborators': collaborators_info,
-                    }
-                    response_data.append(project_data)
-
-                return Response(response_data, status=status.HTTP_200_OK)
-            else:
-                return Response({"message": "No se encontraron proyectos"}, status=status.HTTP_404_NOT_FOUND)
-
-        else:
-            return Response({"message": "No se encontraron colaboraciones."}, status=status.HTTP_404_NOT_FOUND)
         
     async def get_collaboration_count_proyect(self, project):
         return await sync_to_async(lambda: Collaborations.objects.filter(project=project).count())()
@@ -1446,8 +1442,12 @@ class PublicacionViewSet(ViewSet):
         collaborator_info = []
         for collab in collaborators:
             if collab.user and collab.user.authuser:
+                
+                photo = await sync_to_async(lambda: Users.objects.filter(id=collab.user.authuser.id).first())()
+                
                 user_info = {
                     "id": collab.user.id,
+                    "photo" : photo.photo,
                     "name": f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
                 }
                 collaborator_info.append(user_info)
@@ -1459,82 +1459,8 @@ class PublicacionViewSet(ViewSet):
             authuser = await sync_to_async(User.objects.get)(id=obj.responsible_id)
             if authuser:
                 return f"{authuser.first_name} {authuser.last_name}"    
-           
         
-
-    @swagger_auto_schema(
-        method='delete',
-        operation_summary="Delete Collaborator",
-        operation_description="Delete a collaborator from a project.",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description="ID of the project"),
-                'user_id': openapi.Schema(type=openapi.TYPE_INTEGER, description="ID of the user to remove from project")
-            },
-            required=['project_id', 'user_id']
-        ),
-        responses={
-            204: openapi.Response(description="Collaborator deleted successfully"),
-            400: openapi.Response(description="Both project_id and user_id are required"),
-            404: openapi.Response(description="Project/User/Collaboration not found"),
-            500: openapi.Response(description="Internal server error")
-        },
-        tags=["Collab Management"]
-    )
-    @action(detail=False, methods=['DELETE'], url_path='delete_collaborator', permission_classes=[IsAuthenticated])
-    async def delete_collaborator(self, request):
-        project_id = request.data.get('project_id')
-        user_id = request.data.get('user_id')
-
-        if not project_id or not user_id:
-            return Response({"error": "Both project_id and user_id are required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            # Verificar que el proyecto y el usuario existen
-            project = await sync_to_async(Projects.objects.get)(id=project_id)
-            user = await sync_to_async(Users.objects.get)(id=user_id)
-
-            # Verificar que la colaboración existe
-            collaboration = await sync_to_async(Collaborations.objects.filter)(project=project, user=user)
-            collaboration_instance = await sync_to_async(collaboration.first)()
-            if not collaboration_instance:
-                return Response({"error": "Collaboration not found"}, status=status.HTTP_404_NOT_FOUND)
-
-            # Eliminar la colaboración
-            await sync_to_async(collaboration_instance.delete)()
-
-            # Eliminar la solicitud asociada al proyecto y usuario
-            solicitud = await sync_to_async(Solicitudes.objects.filter)(id_project=project, id_user=user)
-            solicitud_instance = await sync_to_async(solicitud.first)()
-            if solicitud_instance:
-                await sync_to_async(solicitud_instance.delete)()
-
-            # Crear la notificación para el usuario eliminado
-            notification_data = {
-                'sender': request.user.id,  # Usuario autenticado (quien realiza la eliminación)
-                'message': f"Has sido eliminado como colaborador del proyecto '{project.name}'.",
-                'is_read': 0,
-                'created_at': timezone.now().strftime('%Y-%m-%d'),
-                'user_id': user.id  # Usuario eliminado del proyecto
-            }
-            notification_serializer = NotificationSerializer(data=notification_data)
-
-            if await sync_to_async(notification_serializer.is_valid)():
-                await sync_to_async(notification_serializer.save)()
-            else:
-                return Response(notification_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-            return Response({"message": "Collaborator deleted and notified successfully"}, status=status.HTTP_204_NO_CONTENT)
-
-        except Projects.DoesNotExist:
-            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
-        except Users.DoesNotExist:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-class FormsViewSet(ViewSet):
+class FormsViewSet(ViewSet): #(Form Management) 
     @swagger_auto_schema(
         operation_description="Crear un nuevo formulario",
         request_body=openapi.Schema(
@@ -1672,7 +1598,7 @@ class FormsViewSet(ViewSet):
     async def get_form(self, form_id):
         return await sync_to_async(Forms.objects.get)(id=form_id)
 
-class UserAchievementsViewSet(ViewSet):
+class UserAchievementsViewSet(ViewSet): #(UserAchievements Management)
 
     @swagger_auto_schema(
         operation_description="Validar logros de un usuario y almacenarlos",
@@ -1680,7 +1606,7 @@ class UserAchievementsViewSet(ViewSet):
             status.HTTP_200_OK: openapi.Response('Logros validados y almacenados'),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Error en la solicitud'),
         },
-        tags=["User Achievements"]
+        tags=["UserAchievements Management"]
     )
     @action(detail=False, methods=['POST'],  url_path='validate_achievements', permission_classes=[IsAuthenticated])
     def validate_achievements(self, request):
@@ -1754,8 +1680,7 @@ class UserAchievementsViewSet(ViewSet):
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
-        
+          
     @swagger_auto_schema(
         operation_description="Obtener todos los logros del usuario",
         responses={
@@ -1783,12 +1708,15 @@ class UserAchievementsViewSet(ViewSet):
             ),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Error en la solicitud'),
         },
-        tags=["User Achievements"]
+        tags=["UserAchievements Management"]
     )
     @action(detail=False, methods=['GET'], url_path='list_user_achievements', permission_classes=[IsAuthenticated])
     def list_user_achievements(self, request):
         user = request.user
         user_achievements = UserAchievements.objects.filter(user=user.id)
+        
+        # Obtener la foto del usuario
+        user_photo = Users.objects.filter(authuser=user.id).values_list('photo', flat=True).first()
         
         # Serializar los logros del usuario
         achievements_data = [
@@ -1797,7 +1725,6 @@ class UserAchievementsViewSet(ViewSet):
                 "unlocked": achievement.unlocked,
                 "name": achievement.achievement.name,
                 "description": achievement.achievement.description
-                
             }
             for achievement in user_achievements
         ]
@@ -1806,6 +1733,7 @@ class UserAchievementsViewSet(ViewSet):
         response_data = {
             "user": user.id,
             "first_name": user.first_name,
+            "photo": user_photo,   
             "last_name": user.last_name,
             "achievements": achievements_data
         }
@@ -1841,7 +1769,7 @@ class UserAchievementsViewSet(ViewSet):
             ),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Error en la solicitud'),
         },
-        tags=["User Achievements"]
+        tags=["UserAchievements Management"]
     )
     @action(detail=False, methods=['POST'], url_path='list_user_achievements_id', permission_classes=[IsAuthenticated])
     def list_user_achievements_id(self, request):
@@ -1852,6 +1780,10 @@ class UserAchievementsViewSet(ViewSet):
             return Response({"error": "Usuario no encontrado."}, status=status.HTTP_400_BAD_REQUEST)
 
         user_achievements = UserAchievements.objects.filter(user=user.id)
+        
+        # Obtener la foto del usuario
+        user_photo = user.photo if user.photo else None
+
         # Serializar los logros del usuario
         achievements_data = [
             {
@@ -1859,7 +1791,6 @@ class UserAchievementsViewSet(ViewSet):
                 "unlocked": achievement.unlocked,
                 "name": achievement.achievement.name,
                 "description": achievement.achievement.description
-                
             }
             for achievement in user_achievements
         ]
@@ -1869,13 +1800,764 @@ class UserAchievementsViewSet(ViewSet):
             "user": user.id,
             "first_name": user.authuser.first_name,
             "last_name": user.authuser.last_name,
+            "photo": user_photo,
             "achievements": achievements_data
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
     
+    @swagger_auto_schema(
+        operation_description="Obtener todos los logros",
+        responses={
+            status.HTTP_200_OK: openapi.Response('Lista de logros', AchievementsSerializer(many=True)),
+            status.HTTP_404_NOT_FOUND: openapi.Response('No se encontraron logros'),
+        },
+        tags=["UserAchievements Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='all_achievements', permission_classes=[IsAuthenticated])
+    async def get_all_achievements(self, request):
+        # Obtener todos los logros de forma asincrónica
+        achievements = await self.get_achievements()
+        
+        if not achievements:
+            return Response({'detail': 'No se encontraron logros.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Serializar los logros
+        serializer = AchievementsSerializer(achievements, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    async def get_achievements(self):
+        return await sync_to_async(list)(Achievements.objects.all())
     
+    @swagger_auto_schema(
+        operation_description="Obtener todos los logros disponibles",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['user_id'],
+            properties={
+                'user_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario'),
+            },
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response('Lista de logros disponibles', AchievementsSerializer(many=True)),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Usuario no encontrado'),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('ID de usuario inválido'),
+        },
+        tags=["UserAchievements Management"]
+    )
+    @action(detail=False, methods=['POST'], url_path='get_all_achievements_id', permission_classes=[IsAuthenticated])
+    async def get_all_achievements_id(self, request):
+        user_id = request.data.get('user_id')
+
+        # Validar el ID del usuario
+        if user_id is None:
+            return Response({'detail': 'ID de usuario inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verificar si el usuario existe
+        user_exists = await self.check_user_exists(user_id)
+        
+        if not user_exists:
+            return Response({'detail': 'Usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Obtener todos los logros de forma asíncrona
+        achievements = await self.get_all_achievements()
+        
+        # Serializar los logros
+        serializer = AchievementsSerializer(achievements, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    async def check_user_exists(self, user_id):
+        # Verificar si el usuario existe
+        return await sync_to_async(Users.objects.filter(id=user_id).exists)()
+
+    async def get_all_achievements(self):
+        # Obtener todos los logros
+        return await sync_to_async(list)(Achievements.objects.all())
     
+class ApplicationsViewSet(ViewSet): #(Applications Management)
+
+    @swagger_auto_schema(
+        operation_summary="Aplicar a un proyecto",
+        operation_description="Permite a un usuario aplicar a un proyecto específico.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['project_id', 'message'],
+            properties={
+                'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto'),
+                'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de la solicitud')
+            }
+        ),
+        responses={
+            status.HTTP_201_CREATED: openapi.Response(
+                'Solicitud y notificación creadas exitosamente',
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'solicitud': openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'id_user': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario que aplicó'),
+                                'id_project': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto'),
+                                'status': openapi.Schema(type=openapi.TYPE_STRING, description='Estado de la solicitud'),
+                                'name_lider': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del líder del proyecto'),
+                                'created_at': openapi.Schema(type=openapi.TYPE_STRING, format='date', description='Fecha de creación de la solicitud'),
+                                'name_project': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del proyecto'),
+                                'name_user': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del usuario que aplicó'),
+                                'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de la solicitud')
+                            }
+                        ),
+                        'notificación': openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'user': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario que recibe la notificación'),
+                                'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de la notificación'),
+                                'is_read': openapi.Schema(type=openapi.TYPE_INTEGER, description='Estado de lectura de la notificación (0 o 1)'),
+                                'created_at': openapi.Schema(type=openapi.TYPE_STRING, format='date-time', description='Fecha de creación de la notificación'),
+                                'sender': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario que envió la notificación')
+                            }
+                        )
+                    }
+                )
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Error en los datos proporcionados'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Proyecto no encontrado'),
+        },
+        tags=["Applications Management"]
+    )
+    @action(detail=False, methods=['POST'], url_path='ApplyProject', permission_classes=[IsAuthenticated])
+    async def ApplyProject(self, request):
+            project_id = request.data.get('project_id')
+            message = request.data.get('message')
+            user = request.user
+            
+            try:
+                project = await sync_to_async(Projects.objects.get)(id=project_id)
+                if not project.accepting_applications:
+                    return Response({"error": "Este proyecto no está aceptando aplicaciones"}, status=status.HTTP_400_BAD_REQUEST)
+
+                existing_solicitud = await sync_to_async(Solicitudes.objects.filter(id_user=user.id, id_project=project_id).first)()
+                if existing_solicitud:
+                    return Response({"error": "Ya has aplicado a este proyecto."}, status=status.HTTP_400_BAD_REQUEST)
+                
+                lider_id = project.responsible_id  
+                
+                lider = await sync_to_async(User.objects.get)(id=lider_id)  
+                
+                photo = await sync_to_async(lambda: Users.objects.filter(id = user.id).first())()
+
+                name_lider = f"{lider.first_name} {lider.last_name}"
+
+                # Crear la solicitud
+                solicitud_data = {
+                    'id_user': user.id,
+                    'name_lider': name_lider,
+                    'created_at': timezone.now().strftime('%Y-%m-%d'),
+                    'id_project': project.id,
+                    "message" : message,
+                    'status': 'Pendiente',
+                    'photo' : photo.photo,
+                    'name_project': project.name,
+                    'name_user': f"{user.first_name} {user.last_name}",
+                }
+
+                solicitud_serializer = SolicitudSerializer(data=solicitud_data)
+
+                if await sync_to_async(solicitud_serializer.is_valid)():
+                    await sync_to_async(solicitud_serializer.save)()
+                
+                    # Crear la notificación para el propietario del proyecto
+                    notification_data = {
+                        'sender': user.id,  
+                        'message': f"{user.first_name} {user.last_name} aplico al proyecto '{project.name}' ",
+                        'is_read': 0,
+                        'created_at': timezone.now(),
+                        'user_id': lider_id
+                    }
+                    notification_serializer = NotificationSerializer(data=notification_data)
+                    
+                    if await sync_to_async(notification_serializer.is_valid)():
+                        await sync_to_async(notification_serializer.save)()
+                    else:
+                        return Response(notification_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+                    return Response(solicitud_serializer.data, status=status.HTTP_201_CREATED)
+                else:
+                    return Response(solicitud_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            except Projects.DoesNotExist:
+                return Response({"error": "Proyecto no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+            except User.DoesNotExist:
+                return Response({"error": "Líder del proyecto no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+            except Exception as e:
+                return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @swagger_auto_schema(
+        operation_summary="Aceptar solicitud de un proyecto",
+        operation_description="Permite a un usuario aceptar una solicitud de un proyecto específico.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['id_solicitud'],
+            properties={
+                'id_solicitud': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID de la solicitud'),
+            }
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                'Solicitud aceptada exitosamente',
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'mensaje': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de éxito')
+                    }
+                )
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Error en los datos proporcionados'),
+            status.HTTP_403_FORBIDDEN: openapi.Response('No tienes permiso para aceptar esta solicitud'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Solicitud no encontrada'),
+        },
+        tags=["Applications Management"]
+    )
+    @action(detail=False, methods=['POST'], url_path='AcceptProject',permission_classes=[IsAuthenticated])
+    async def AcceptProject(self, request):
+        id_solicitud = request.data.get('id_solicitud')
+        user = request.user
+        try:
+            solicitud = await sync_to_async(Solicitudes.objects.select_related('id_project', 'id_user').get)(id_solicitud=id_solicitud)
+
+            project_responsible_id = solicitud.id_project
+
+            project_responsible_user_id = await sync_to_async(lambda: project_responsible_id.responsible)()
+
+            if project_responsible_user_id.id != user.id:
+                return Response({"error": "No tienes permiso para aceptar esta solicitud"}, status=status.HTTP_403_FORBIDDEN)
+            
+            solicitud.status = 'Aceptada'
+            await sync_to_async(solicitud.save)()
+
+            collaboration_data = {
+                'user': solicitud.id_user.id,
+                'project': solicitud.id_project.id,
+                'status': 'Activa'
+            }
+            collaboration_serializer = CollaboratorSerializer(data=collaboration_data)
+            
+            if await sync_to_async(collaboration_serializer.is_valid)():
+                await sync_to_async(collaboration_serializer.save)()
+                # Crear la notificación para el usuario que aplicó al proyecto
+                notification_data = {
+                    'sender': user.id,  # El usuario que acepta la solicitud
+                    'message': f"Tu solicitud al proyecto '{solicitud.id_project.name}' ha sido aceptada.",
+                    'is_read': 0,
+                    'created_at': timezone.now(),
+                    'user_id': solicitud.id_user.id  # Usuario que aplicó al proyecto
+                }
+                notification_serializer = NotificationSerializer(data=notification_data)
+                
+                if await sync_to_async(notification_serializer.is_valid)():
+                    await sync_to_async(notification_serializer.save)()
+                else:
+                    return Response(notification_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                
+                return Response({"mensaje": "Solicitud aceptada y colaboración creada exitosamente"}, status=status.HTTP_200_OK)
+            else:
+                return Response(collaboration_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Solicitudes.DoesNotExist:
+            return Response({"error": "Solicitud no encontrada"}, status=status.HTTP_404_NOT_FOUND)
+
+    @swagger_auto_schema(
+        operation_summary="Negar solicitud de un proyecto",
+        operation_description="Permite a un usuario negar una solicitud de un proyecto específico.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['id_solicitud'],
+            properties={
+                'id_solicitud': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID de la solicitud'),
+            }
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                'Solicitud negada exitosamente',
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'mensaje': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de éxito')
+                    }
+                )
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Error en los datos proporcionados'),
+            status.HTTP_403_FORBIDDEN: openapi.Response('No tienes permiso para negar esta solicitud'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Solicitud no encontrada'),
+        },
+        tags=["Applications Management"]
+    )
+    @action(detail=False, methods=['POST'], url_path='Denyproject',permission_classes=[IsAuthenticated])
+    async def Denyproject(self, request):
+        solicitud_id = request.data.get('id_solicitud')
+        user = request.user
+        try:
+            solicitud = await sync_to_async(Solicitudes.objects.select_related('id_project', 'id_user').get)(id_solicitud=solicitud_id)
+
+            project_responsible_id = solicitud.id_project
+
+            project_responsible_user_id = await sync_to_async(lambda: project_responsible_id.responsible)()
+
+            if project_responsible_user_id.id != user.id:
+                return Response({"error": "No tienes permiso para aceptar esta solicitud"}, status=status.HTTP_403_FORBIDDEN)
+            
+            # Cambiar el estado de la solicitud a 'Negada'
+            solicitud.status = 'Rechazado'
+            await sync_to_async(solicitud.save)()
+            
+             # Crear la notificación para el usuario que aplicó al proyecto
+            notification_data = {
+                'sender': user.id,  # Usuario responsable del proyecto que rechaza la solicitud
+                'message': f"Tu solicitud al proyecto '{solicitud.id_project.name}' ha sido rechazada.",
+                'is_read': 0,
+                'created_at': timezone.now(),
+                'user_id': solicitud.id_user.id  # Usuario que aplicó al proyecto
+            }
+            notification_serializer = NotificationSerializer(data=notification_data)
+            
+            if await sync_to_async(notification_serializer.is_valid)():
+                await sync_to_async(notification_serializer.save)()
+            else:
+                return Response(notification_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            return Response({"mensaje": "Solicitud negada exitosamente"}, status=status.HTTP_200_OK)
+        
+        except Solicitudes.DoesNotExist:
+            return Response({"error": "Solicitud no encontrada"}, status=status.HTTP_404_NOT_FOUND)  
+
+    @swagger_auto_schema(
+    operation_summary="Obtener solicitudes del usuario",
+    operation_description="Recupera todas las solicitudes (solicitudes) enviadas por el usuario autenticado.",
+    responses={
+        status.HTTP_200_OK: openapi.Response(
+            'Solicitudes del usuario recuperadas con éxito',
+            openapi.Schema(
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'id_solicitud': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID de la solicitud'),
+                        'id_project': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del proyecto'),
+                        'status': openapi.Schema(type=openapi.TYPE_STRING, description='Estado actual de la solicitud'),
+                        'created_at': openapi.Schema(type=openapi.TYPE_STRING, format='date-time', description='Fecha de creación de la solicitud'),
+                        'name_project': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del proyecto'),
+                        'name_user': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del usuario que aplicó'),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de la solicitud')
+                    }
+                )
+            )
+        ),
+        status.HTTP_404_NOT_FOUND: openapi.Response(
+            'No se encontraron solicitudes para este usuario',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error')
+                }
+            )
+        ),
+        status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
+            'Error interno del servidor',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción del error')
+                }
+            )
+        )
+    },
+    tags=["Applications Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='applications_user', permission_classes=[IsAuthenticated])
+    async def get_applications_user(self, request):
+        user = request.user.id  
+        
+        try:
+                # Filtrar todas las solicitudes hechas por el usuario autenticado
+                solicitudes = await sync_to_async(list)(Solicitudes.objects.filter(id_user=user).order_by("-id_solicitud"))
+
+                # Verificar si el usuario tiene solicitudes
+                if not solicitudes:
+                    return Response({"message": "No solicitudes found for this user"}, status=status.HTTP_404_NOT_FOUND)
+
+                # Serializar las solicitudes
+                serializer = await sync_to_async(SolicitudSerializer)(solicitudes, many=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+                return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    @swagger_auto_schema(
+        operation_summary="Obtener solicitudes de un proyecto",
+        operation_description="Recupera todas las solicitudes (solicitudes) para un proyecto específico.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['project_id'],
+            properties={
+                'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description="ID del proyecto")
+            }
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                'Solicitudes del proyecto recuperadas con éxito',
+                openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'id_solicitud': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID de la solicitud'),
+                            'id_user': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario que aplicó'),
+                            'status': openapi.Schema(type=openapi.TYPE_STRING, description='Estado actual de la solicitud'),
+                            'created_at': openapi.Schema(type=openapi.TYPE_STRING, format='date-time', description='Fecha de creación de la solicitud'),
+                            'name_user': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del usuario que aplicó'),
+                            'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de la solicitud'),
+                            'photo': openapi.Schema(type=openapi.TYPE_STRING, description='Foto del usuario que aplicó')
+                        }
+                    )
+                )
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(
+                'project_id es requerido',
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción del error')
+                    }
+                )
+            ),
+            status.HTTP_404_NOT_FOUND: openapi.Response(
+                'Proyecto no encontrado',
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción del error')
+                    }
+                )
+            ),
+            status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
+                'Error interno del servidor',
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción del error')
+                    }
+                )
+            )
+        },
+        tags=["Applications Management"]
+    )   
+    @action(detail=False, methods=['POST'], url_path='applications_project', permission_classes=[IsAuthenticated])
+    async def get_applications_project(self, request):
+        project_id = request.data.get('project_id')
+
+        if not project_id:
+            return Response({"error": "project_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            project = await sync_to_async(Projects.objects.get)(id=project_id)
+            
+            solicitudes = await sync_to_async(list)(Solicitudes.objects.filter(id_project=project).order_by("-id_solicitud"))
+            
+            # Serializar las solicitudes
+            serializer = SolicitudSerializer(solicitudes, many=True)
+            solicitudes_data = serializer.data
+
+            # Agregar la foto del usuario a cada solicitud
+            for solicitud in solicitudes_data:
+                user = await sync_to_async(Users.objects.get)(id=solicitud['id_user'])
+                solicitud['photo'] = user.photo if user.photo else None
+
+            return Response(solicitudes_data, status=status.HTTP_200_OK)
+
+        except Projects.DoesNotExist:
+            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @swagger_auto_schema(
+        operation_summary="Eliminar solicitud",
+        operation_description="Permite a un usuario eliminar una solicitud específica si está en estado 'Rechazado' o 'Pendiente'.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['solicitud_id'],
+            properties={
+                'solicitud_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID de la solicitud'),
+            }
+        ),
+        responses={
+            status.HTTP_204_NO_CONTENT: openapi.Response(
+                'Solicitud eliminada exitosamente',
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de éxito')
+                    }
+                )
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Error en los datos proporcionados o la solicitud no puede ser eliminada'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Solicitud no encontrada o no pertenece al usuario'),
+            status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response('Error interno del servidor'),
+        },
+        tags=["Applications Management"]
+    )
+    @action(detail=False, methods=['DELETE'], url_path='delete_solicitud', permission_classes=[IsAuthenticated])
+    async def delete_solicitud(self, request):
+        solicitud_id = request.data.get('solicitud_id')
+        user = request.user.id  
+
+        if not solicitud_id:
+            return Response({"error": "solicitud_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Verificar si la solicitud existe y pertenece al usuario autenticado
+            solicitud = await sync_to_async(Solicitudes.objects.get)(id_solicitud=solicitud_id, id_user=user)
+
+            # Verificar si la solicitud ha sido rechazada o no
+            if solicitud.status in ['Rechazado', 'Pendiente']:
+                # Si la solicitud está pendiente o ha sido rechazada, se permite eliminarla
+                await sync_to_async(solicitud.delete)()
+                return Response({"message": "Solicitud deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({"error": "Cannot delete a solicitud that has been accepted or is in another status"}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Solicitudes.DoesNotExist:
+            return Response({"error": "Solicitud not found or does not belong to the user"}, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class NotificationsViewSet(ViewSet): #Notifiacions Management
+    
+    @swagger_auto_schema(
+        operation_description="Obtener todas las notificaciones del usuario logueado",
+        responses={
+            status.HTTP_200_OK: openapi.Response('Lista de notificaciones obtenida exitosamente'),
+            status.HTTP_401_UNAUTHORIZED: openapi.Response('Usuario no autorizado'),
+        },
+        tags=["Notifications Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='Getnotifications', permission_classes=[IsAuthenticated])
+    async def Getnotifications(self, request):
+        user = request.user
+        
+        try:
+            # Obtener todas las notificaciones del usuario logueado
+            notifications = await sync_to_async(list)(Notifications.objects.filter(user_id=user.id).order_by('-id'))
+
+            # Serializar solo los mensajes de las notificaciones
+            serializer = NotificationSerializerMS(notifications, many=True)
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Notifications.DoesNotExist:
+            return Response({"error": "No se encontraron notificaciones"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @swagger_auto_schema(
+    operation_summary="Marcar notificaciones como leídas",
+    operation_description="Permite a un usuario marcar todas sus notificaciones como leídas.",
+    responses={
+        status.HTTP_200_OK: openapi.Response(
+            'Notificaciones marcadas como leídas',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de éxito')
+                }
+            )
+        ),
+        status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response('Error interno del servidor'),
+    },
+    tags=["Notifications Management"]
+)
+    @action(detail=False, methods=['PUT'], url_path='isread_notifications', permission_classes=[IsAuthenticated])
+    async def isread_notifications(self, request):
+        user = request.user
+        
+        try:
+            # Actualizar el campo isread de todas las notificaciones del usuario a 1
+            await sync_to_async(Notifications.objects.filter(user_id=user.id).update)(is_read=1)
+            return Response({"message": "Notificaciones marcadas como leídas"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+class CollaboratorsViewSet(ViewSet): #(Collaborators Management)
+    
+    @swagger_auto_schema(
+        method='get',
+        operation_summary="Retrieve Collaborated Projects",
+        operation_description="Retrieve the list of projects the authenticated user has collaborated on.",
+        responses={
+            200: openapi.Response(
+                description="Successful response with list of projects.",
+                schema=ProjectSerializer(many=True)
+            ),
+            404: openapi.Response(description="No projects found for the collaborations.")
+        },
+        tags=["collaborators Management"]
+    )
+    @action(detail=False, methods=['GET'], url_path='view_project_usercollab', permission_classes=[IsAuthenticated])
+    async def view_project_usercollab(self, request):
+        # Obtener la instancia del usuario autenticado
+        user_instance = request.user.id  # Ajusta esto si tu relación es diferente
+
+        # Filtrar colaboraciones del usuario de forma asíncrona
+        collaborations = await sync_to_async(list)(Collaborations.objects.filter(user=user_instance))
+
+        # Obtener los proyectos relacionados a las colaboraciones de forma asíncrona
+        if collaborations:
+            
+            project_ids = await sync_to_async(lambda: [collab.project_id for collab in collaborations])()
+            projects = await sync_to_async(list)(Projects.objects.filter(id__in=project_ids))
+
+            if projects:
+
+                response_data = []
+                for project in projects:
+                    collaboratorsall = await sync_to_async(list)(Collaborations.objects.filter(project=project).select_related('user__authuser'))
+                    
+                    collaborators_info = await self.get_collaborators_info_proyect(collaboratorsall)
+
+                    name_responsible = await self.get_responsible_name_proyect(project)
+
+                    collaboration_count = await self.get_collaboration_count_proyect(project)
+
+                    # Obtener la foto del responsable del proyecto
+                    responsible_user = await sync_to_async(Users.objects.get)(id=project.responsible_id)
+                    responsible_photo = responsible_user.photo if responsible_user.photo else None
+
+                    project_data = {
+                        'id': project.id,
+                        'name': project.name,
+                        'description': project.description,
+                        'start_date': project.start_date,
+                        'end_date': project.end_date,
+                        'status': project.status,
+                        'project_type': project.project_type,
+                        'priority': project.priority,
+                        'responsible': project.responsible_id,  
+                        'name_responsible': name_responsible,
+                        'detailed_description': project.detailed_description,
+                        'type_aplyuni': project.type_aplyuni,
+                        'objectives': project.objectives,
+                        'necessary_requirements': project.necessary_requirements,
+                        'progress': project.progress,
+                        'accepting_applications': project.accepting_applications,
+                        'name_uniuser': project.name_uniuser,
+                        'collaboration_count': collaboration_count,
+                        'collaborators': collaborators_info,
+                        'responsible_photo': responsible_photo,  # Agregar la foto del responsable
+                    }
+                    response_data.append(project_data)
+
+                return Response(response_data, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "No se encontraron proyectos"}, status=status.HTTP_404_NOT_FOUND)
+
+        else:
+            return Response({"message": "No se encontraron colaboraciones."}, status=status.HTTP_404_NOT_FOUND)
+        
+    async def get_collaboration_count_proyect(self, project):
+        return await sync_to_async(lambda: Collaborations.objects.filter(project=project).count())()
+
+    async def get_collaborators_info_proyect(self, collaborators):
+        collaborator_info = []
+        for collab in collaborators:
+            if collab.user and collab.user.authuser:
+                photo = await sync_to_async(lambda: Users.objects.filter(id=collab.user.authuser.id).first())()
+                user_info = {
+                    "id": collab.user.id,
+                    "photo" : photo.photo,
+                    "name": f"{collab.user.authuser.first_name} {collab.user.authuser.last_name}"
+                }
+                collaborator_info.append(user_info)
+        return collaborator_info
+
+    async def get_responsible_name_proyect(self, obj):
+        
+        if obj.responsible_id: 
+            authuser = await sync_to_async(User.objects.get)(id=obj.responsible_id)
+            if authuser:
+                return f"{authuser.first_name} {authuser.last_name}"    
+           
+    @swagger_auto_schema(
+        method='delete',
+        operation_summary="Delete Collaborator",
+        operation_description="Delete a collaborator from a project.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'project_id': openapi.Schema(type=openapi.TYPE_INTEGER, description="ID of the project"),
+                'user_id': openapi.Schema(type=openapi.TYPE_INTEGER, description="ID of the user to remove from project")
+            },
+            required=['project_id', 'user_id']
+        ),
+        responses={
+            204: openapi.Response(description="Collaborator deleted successfully"),
+            400: openapi.Response(description="Both project_id and user_id are required"),
+            404: openapi.Response(description="Project/User/Collaboration not found"),
+            500: openapi.Response(description="Internal server error")
+        },
+        tags=["collaborators Management"]
+    )
+    @action(detail=False, methods=['DELETE'], url_path='delete_collaborator', permission_classes=[IsAuthenticated])
+    async def delete_collaborator(self, request):
+        project_id = request.data.get('project_id')
+        user_id = request.data.get('user_id')
+
+        if not project_id or not user_id:
+            return Response({"error": "Both project_id and user_id are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Verificar que el proyecto y el usuario existen
+            project = await sync_to_async(Projects.objects.get)(id=project_id)
+            user = await sync_to_async(Users.objects.get)(id=user_id)
+
+            # Verificar que la colaboración existe
+            collaboration = await sync_to_async(Collaborations.objects.filter)(project=project, user=user)
+            collaboration_instance = await sync_to_async(collaboration.first)()
+            if not collaboration_instance:
+                return Response({"error": "Collaboration not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Eliminar la colaboración
+            await sync_to_async(collaboration_instance.delete)()
+
+            # Eliminar la solicitud asociada al proyecto y usuario
+            solicitud = await sync_to_async(Solicitudes.objects.filter)(id_project=project, id_user=user)
+            solicitud_instance = await sync_to_async(solicitud.first)()
+            if solicitud_instance:
+                await sync_to_async(solicitud_instance.delete)()
+
+            # Crear la notificación para el usuario eliminado
+            notification_data = {
+                'sender': request.user.id,  # Usuario autenticado (quien realiza la eliminación)
+                'message': f"Has sido eliminado como colaborador del proyecto '{project.name}'.",
+                'is_read': 0,
+                'created_at': timezone.now().strftime('%Y-%m-%d'),
+                'user_id': user.id  # Usuario eliminado del proyecto
+            }
+            notification_serializer = NotificationSerializer(data=notification_data)
+
+            if await sync_to_async(notification_serializer.is_valid)():
+                await sync_to_async(notification_serializer.save)()
+            else:
+                return Response(notification_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            return Response({"message": "Collaborator deleted and notified successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+        except Projects.DoesNotExist:
+            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Users.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class MetricsViewSet(ViewSet): #(Metrics Management)
     
     @swagger_auto_schema(
         operation_summary="Obtener métricas actuales del usuario",
@@ -1894,7 +2576,7 @@ class UserAchievementsViewSet(ViewSet):
             ),
             404: "Usuario no encontrado",
         },
-        tags=["User Achievements"]
+        tags=["Metrics Management"]
     )
     @action(detail=False, methods=['GET'], url_path='metrics', permission_classes=[IsAuthenticated])
     def metrics(self, request):
@@ -1951,7 +2633,7 @@ class UserAchievementsViewSet(ViewSet):
             ),
             404: "Usuario no encontrado",
         },
-        tags=["User Achievements"]
+        tags=["Metrics Management"]
     )
     @action(detail=False, methods=['POST'], url_path='metrics_id', permission_classes=[IsAuthenticated])
     def metrics_id(self, request):
@@ -1974,9 +2656,12 @@ class UserAchievementsViewSet(ViewSet):
         
         # Contar proyectos donde el usuario es líder
         leader_projects = Projects.objects.filter(responsible_id=user_id).count()
+        
+        photo =  Users.objects.filter(authuser_id=user_id).first()
 
         # Crear un diccionario con las métricas
         metrics = {
+            "photo" : photo.photo,
             "proyectos_en_progreso": projects_in_progress,
             "logros_pesbloqueados": unlocked_achievements,
             "proyectos_finalizados": completed_projects,
@@ -1985,76 +2670,6 @@ class UserAchievementsViewSet(ViewSet):
         }
 
         return Response(metrics, status=status.HTTP_200_OK)
-    
-    @swagger_auto_schema(
-        operation_description="Obtener todos los logros",
-        responses={
-            status.HTTP_200_OK: openapi.Response('Lista de logros', AchievementsSerializer(many=True)),
-            status.HTTP_404_NOT_FOUND: openapi.Response('No se encontraron logros'),
-        },
-        tags=["User Achievements"]
-    )
-    @action(detail=False, methods=['GET'], url_path='all_achievements', permission_classes=[IsAuthenticated])
-    async def get_all_achievements(self, request):
-        # Obtener todos los logros de forma asincrónica
-        achievements = await self.get_achievements()
-        
-        if not achievements:
-            return Response({'detail': 'No se encontraron logros.'}, status=status.HTTP_404_NOT_FOUND)
-
-        # Serializar los logros
-        serializer = AchievementsSerializer(achievements, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    async def get_achievements(self):
-        return await sync_to_async(list)(Achievements.objects.all())
-    
-    
-    @swagger_auto_schema(
-        operation_description="Obtener todos los logros disponibles",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['user_id'],
-            properties={
-                'user_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del usuario'),
-            },
-        ),
-        responses={
-            status.HTTP_200_OK: openapi.Response('Lista de logros disponibles', AchievementsSerializer(many=True)),
-            status.HTTP_404_NOT_FOUND: openapi.Response('Usuario no encontrado'),
-            status.HTTP_400_BAD_REQUEST: openapi.Response('ID de usuario inválido'),
-        },
-        tags=["User Achievements"]
-    )
-    @action(detail=False, methods=['POST'], url_path='get_all_achievements_id', permission_classes=[IsAuthenticated])
-    async def get_all_achievements_id(self, request):
-        user_id = request.data.get('user_id')
-
-        # Validar el ID del usuario
-        if user_id is None:
-            return Response({'detail': 'ID de usuario inválido.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Verificar si el usuario existe
-        user_exists = await self.check_user_exists(user_id)
-        
-        if not user_exists:
-            return Response({'detail': 'Usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-
-        # Obtener todos los logros de forma asíncrona
-        achievements = await self.get_all_achievements()
-        
-        # Serializar los logros
-        serializer = AchievementsSerializer(achievements, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    async def check_user_exists(self, user_id):
-        # Verificar si el usuario existe
-        return await sync_to_async(Users.objects.filter(id=user_id).exists)()
-
-    async def get_all_achievements(self):
-        # Obtener todos los logros
-        return await sync_to_async(list)(Achievements.objects.all())
-    
     
     
     

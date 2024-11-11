@@ -1,14 +1,11 @@
 from django.contrib.auth import authenticate
-from django.contrib.auth.models import User
 import adrf
 from adrf.serializers import Serializer
-from asgiref.sync import sync_to_async
-
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Users, Projects , Collaborations, Solicitudes, Notifications, Forms, Achievements, UserAchievements  # Asegúrate de tener bien definido tu modelo de Usuarios
-
 from .models import Users, Projects , Collaborations, Solicitudes  
 from rest_framework import serializers
+from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -39,13 +36,21 @@ class LoginSerializer(Serializer):
             career_name = custom_user.career  
         except Users.DoesNotExist:
             career_name = None  
+            
+        try:
+            name = User.objects.get(email=user)
+            full_name = name.first_name + " " + name.last_name
+        except User.DoesNotExist:
+            full_name = None  
 
         # Retornar los tokens y los datos del usuario, incluyendo el ID
         return {
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'email': user.email,
-            'id': user.id,  
+            'name': full_name,
+            'id': user.id, 
+            'photo' : custom_user.photo ,  
             'university': university_name,
             'career':career_name,
             'photo':Users.photo
@@ -98,7 +103,6 @@ class ProjectSerializerCreate(adrf.serializers.ModelSerializer):
             'type_aplyuni'
   
         ]
-
 
 class ProjectSerializerAll(adrf.serializers.ModelSerializer):
     creator_name = serializers.SerializerMethodField()
@@ -168,7 +172,7 @@ class SolicitudSerializer(adrf.serializers.ModelSerializer):
     
     class Meta:
         model = Solicitudes
-        fields = ["id_solicitud","id_user","id_project","status","name_user","name_lider","message","name_project","created_at"]
+        fields = ["id_solicitud","id_user","id_project","status","name_user","name_lider","message","photo","name_project","created_at"]
 
 class CollaboratorSerializer(adrf.serializers.ModelSerializer):
     class Meta:
@@ -251,7 +255,7 @@ class ProfileSerializer(adrf.serializers.ModelSerializer):
     class Meta:
         model = Users
         fields = ['university', 'career', 'cycle', 'biography','interests','photo', 'achievements', 'created_at', 
-                  'email', 'first_name', 'last_name', 'date_joined']
+                  'email', 'first_name', 'last_name', 'date_joined'] #11
 
 class FormSerializer(adrf.serializers.ModelSerializer):
 
