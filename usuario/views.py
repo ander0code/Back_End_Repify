@@ -2310,7 +2310,7 @@ class MetricsViewSet(ViewSet): #(Metrics Management)
         metrics = {
             "photo" : photo.photo,
             "proyectos_en_progreso": projects_in_progress,
-            "logros_pesbloqueados": unlocked_achievements,
+            "logros_desbloqueados": unlocked_achievements,
             "proyectos_finalizados": completed_projects,
             "proyectos_en_los_que_eres_miembro": member_projects,
             "proyectos_como_líder": leader_projects,
