@@ -124,29 +124,26 @@ class LoginViewSet(ViewSet): #(User Management)
             return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
         
   
-        # Crear el usuario en auth_user
         user = await sync_to_async(User.objects.create_user)(
             username=email, email=email, password=password,first_name=first_name, last_name=last_name 
             )
 
-        # Ahora crea la entrada en la tabla Users
         users_data = {
-            **request.data,  # Copia todos los datos del request
-            'authuser': user.pk,  # Asigna el objeto User recién creado
-            'created_at': timezone.now().strftime('%Y-%m-%d')  # Establece la fecha de creación
+            **request.data,  
+            'authuser': user.pk,  
+            'created_at': timezone.now().strftime('%Y-%m-%d')  
         }
         
         users_serializer = CustomUserSerializer(data=users_data)
         
         if await sync_to_async(users_serializer.is_valid)(raise_exception=False):
-            await sync_to_async(users_serializer.save)()  # Guarda la instancia
+            await sync_to_async(users_serializer.save)()  
             
-            # Generar el token JWT
             refresh = RefreshToken.for_user(user)
             return Response({
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
-                "user": users_serializer.data  # Retorna los datos del usuario
+                "user": users_serializer.data  
             }, status=status.HTTP_201_CREATED)
         
         return Response(users_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -181,23 +178,21 @@ class LoginViewSet(ViewSet): #(User Management)
             return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Obtener el usuario basado en el correo electrónico
+
             user = await sync_to_async(User.objects.get)(email=email)
 
-            # Generar un código de 6 dígitos
+
             reset_code = random.randint(100000, 999999)
 
-            # Almacenar el código y la fecha en el modelo Users
-            user_profile = await sync_to_async(Users.objects.get)(authuser=user) # Asegúrate de que tienes acceso al perfil del usuario
-            user_profile.reset_code = reset_code
+
+            user_profile = await sync_to_async(Users.objects.get)(authuser=user) 
             user_profile.reset_code_created_at = timezone.now()
             await sync_to_async(user_profile.save)()
 
-            # Enviar el correo electrónico con el código de restablecimiento
             send_mail(
                 'Password Reset Code',
                 f'Your password reset code is: {reset_code}',
-                'noreply@yourdomain.com',  # Cambia esto por tu dirección de correo
+                'noreply@yourdomain.com',  
                 [email],
                 fail_silently=False,
             )
@@ -239,21 +234,18 @@ class LoginViewSet(ViewSet): #(User Management)
         new_password = request.data.get("new_password")
         
         try:
-            # Obtener el usuario por email desde auth_user
+
             user = await sync_to_async(User.objects.get)(email=email)
             
-            # Obtener el perfil del usuario
             user_profile = await sync_to_async(Users.objects.get)(authuser=user)
 
-            # Verificar si el código de restablecimiento es correcto
             if user_profile.reset_code == reset_code:
                 # Cambiar la contraseña
                 user.set_password(new_password)
                 await sync_to_async(user.save)() 
                 
-                # Limpiar el código de restablecimiento
                 user_profile.reset_code = None
-                await sync_to_async(user_profile.save)()  # Guardar los cambios en el perfil
+                await sync_to_async(user_profile.save)()  
                 
                 return Response({"message": "Password successfully reset"}, status=status.HTTP_200_OK)
             else:
@@ -283,19 +275,16 @@ class LoginViewSet(ViewSet): #(User Management)
 
         user_id = request.data.get('id')
         try:
-            # Buscar al usuario en la tabla Users por su ID (pk)
+
             user_profile = await sync_to_async(Users.objects.get)(pk=user_id)
             
-            # Obtener el usuario en la tabla auth_user
-            auth_user = user_profile.authuser  # Asumiendo que 'authuser' es una FK a User
+            auth_user = user_profile.authuser  
 
         except Users.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Eliminar el perfil del usuario en la tabla personalizada Users
         await sync_to_async(user_profile.delete)()
 
-        # Eliminar el usuario en la tabla auth_user
         await sync_to_async(auth_user.delete)()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -323,7 +312,6 @@ class PerfilViewSet(ViewSet): #(Profile Management)
             user_profile = await sync_to_async(Users.objects.get)(authuser_id=user_id)
             auth_user =  await sync_to_async(User.objects.get)(id=user_id)
 
-            # Reunir los datos para serializar
             profile_data = {
                 "university": user_profile.university,
                 "career": user_profile.career,
@@ -393,7 +381,6 @@ class PerfilViewSet(ViewSet): #(Profile Management)
             user_profile = await sync_to_async(Users.objects.get)(authuser_id=user_id)
             auth_user = await sync_to_async(User.objects.get)(id=user_id)
 
-            # Reunir los datos para serializar
             profile_data = {
                 "university": user_profile.university,
                 "career": user_profile.career,
@@ -468,16 +455,14 @@ class PerfilViewSet(ViewSet): #(Profile Management)
 
         user_id = request.data.get('id')
         try:
-            # Obtener el perfil de usuario usando el ID (pk)
             user_profile = await sync_to_async(Users.objects.get)(pk=user_id)
         except Users.DoesNotExist:
             return Response({"error": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Crea un serializador con los datos actuales del perfil y los nuevos datos enviados
         serializer = CustomUserSerializer(user_profile, data=request.data, partial=True)
 
         if await sync_to_async(serializer.is_valid)():
-            await sync_to_async(serializer.save)()  # Guarda las actualizaciones
+            await sync_to_async(serializer.save)()  
             return Response(serializer.data, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -694,11 +679,11 @@ class ProjectViewSet(ViewSet): #(Projects Management)
     @action(detail=False, methods=['delete'], url_path='delete_project', permission_classes=[IsAuthenticated])
     async def delete_project(self, request):
         try:
-            # Obtener el proyecto usando el ID (pk)
+
             project_id = request.data.get('id')
             project = await sync_to_async(Projects.objects.get)(pk=project_id)
-            await sync_to_async(project.delete)()  # Elimina el proyecto
-            return Response(status=status.HTTP_204_NO_CONTENT)  # Respuesta sin contenido
+            await sync_to_async(project.delete)()  
+            return Response(status=status.HTTP_204_NO_CONTENT) 
         except Projects.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
     
@@ -725,7 +710,7 @@ class ProjectViewSet(ViewSet): #(Projects Management)
     async def view_project_id(self, request):
 
         project_id = request.data.get('id')
-        user_id = request.user.id  # Obtiene el ID del usuario autenticado
+        user_id = request.user.id 
 
         if not project_id:
 
@@ -815,17 +800,16 @@ class ProjectViewSet(ViewSet): #(Projects Management)
     @action(detail=False, methods=['GET'], url_path='view_project_all', permission_classes=[IsAuthenticated])
     async def view_project_all(self, request):
         try:
-            # Obtener todos los proyectos de forma asíncrona
+
             projects = await sync_to_async(list)(Projects.objects.all().order_by('-id'))
 
             project_data = []
             for project in projects:
-                # Obtiene el nombre del creador y el conteo de colaboraciones de forma asíncrona
+
                 creator_name = await self.get_creator_name(project)
                 responsible_user = await sync_to_async(lambda: Users.objects.filter(id=project.responsible_id).first())()
                 collaboration_count = await self.get_collaboration_count(project)
 
-                # Agrega los datos al diccionario
                 project_dict = {
                     'id': project.id,
                     'name': project.name,
@@ -868,18 +852,16 @@ class ProjectViewSet(ViewSet): #(Projects Management)
     async def view_recent_projects(self, request):
  
         try:
-            # Obtener todos los proyectos de forma asíncrona
  
             projects = await sync_to_async(list)(Projects.objects.all().order_by('-id')[:3])
 
             project_data = []
             for project in projects:
-                # Obtiene el nombre del creador y el conteo de colaboraciones de forma asíncrona
+
                 creator_name = await self.get_creator_name(project)
                 responsible_user = await sync_to_async(lambda: Users.objects.filter(id=project.responsible_id).first())()
                 collaboration_count = await self.get_collaboration_count(project)
 
-                # Agrega los datos al diccionario
                 project_dict = {
                     'id': project.id,
                     'name': project.name,
@@ -989,7 +971,6 @@ class ProjectViewSet(ViewSet): #(Projects Management)
                 name_responsible = await self.get_responsible_name_proyect(project)
                 collaboration_count = await self.get_collaboration_count_proyect(project)
 
-                # Obtener la foto del responsable del proyecto
                 responsible_user = await sync_to_async(Users.objects.get)(id=project.responsible_id)
                 responsible_photo = responsible_user.photo if responsible_user.photo else None
 
@@ -1013,7 +994,7 @@ class ProjectViewSet(ViewSet): #(Projects Management)
                     'name_uniuser': project.name_uniuser,
                     'collaboration_count': collaboration_count,
                     'collaborators': collaborators_info,
-                    'responsible_photo': responsible_photo,  # Agregar la foto del responsable
+                    'responsible_photo': responsible_photo,  
                 }
                 response_data.append(project_data)
 
@@ -1139,20 +1120,17 @@ class FormsViewSet(ViewSet): #(Form Management)
     )
     @action(detail=False, methods=['POST'], url_path='create_form', permission_classes=[IsAuthenticated])
     async def create_form(self, request):
-        # ID del usuario autenticado
+        
         user_id = request.user.id
 
-        # Datos del formulario
         form_data = {
             **request.data,
-            'created_at': timezone.now().strftime('%Y-%m-%d'),  # Fecha de creación
-            'user': user_id,  # Asigna el usuario autenticado como creador del formulario
+            'created_at': timezone.now().strftime('%Y-%m-%d'),  
+            'user': user_id,  
         }
 
-        # Serializa los datos
         form_serializer = FormSerializer(data=form_data)
 
-        # Verifica si los datos son válidos y guarda de manera asincrónica
         if await sync_to_async(form_serializer.is_valid)():
             await sync_to_async(form_serializer.save)()
             return Response(form_serializer.data, status=status.HTTP_201_CREATED)
@@ -1187,7 +1165,7 @@ class FormsViewSet(ViewSet): #(Form Management)
     )
     @action(detail=False, methods=['GET'], url_path='get_all_forms', permission_classes=[IsAuthenticated])
     async def get_all_forms(self, request):
-        # Obtener todos los formularios de forma asincrónica
+        
         forms = await self.get_forms()
         data = []
 
@@ -1224,20 +1202,17 @@ class FormsViewSet(ViewSet): #(Form Management)
     )
     @action(detail=False, methods=['DELETE'], url_path='delete_form', permission_classes=[IsAuthenticated])
     async def delete_form(self, request):
-        # Obtener el ID del formulario del cuerpo de la solicitud
+
         form_id = request.data.get('id')
 
-        # Obtener el formulario de forma asincrónica
         form = await self.get_form(form_id)
 
         if form is None:
             return Response({'detail': 'Formulario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-
-        # Verificar si el usuario tiene permiso para eliminar el formulario
+        
         if form.user_id != request.user.id:
             return Response({'detail': 'No tiene permiso para eliminar este formulario.'}, status=status.HTTP_403_FORBIDDEN)
 
-        # Eliminar el formulario de forma asincrónica
         await sync_to_async(form.delete)()
 
         return Response({'detail': 'Formulario eliminado correctamente.'}, status=status.HTTP_204_NO_CONTENT)
@@ -1751,18 +1726,16 @@ class ApplicationsViewSet(ViewSet): #(Applications Management)
 
             if project_responsible_user_id.id != user.id:
                 return Response({"error": "No tienes permiso para aceptar esta solicitud"}, status=status.HTTP_403_FORBIDDEN)
-            
-            # Cambiar el estado de la solicitud a 'Negada'
+
             solicitud.status = 'Rechazado'
             await sync_to_async(solicitud.save)()
             
-             # Crear la notificación para el usuario que aplicó al proyecto
             notification_data = {
-                'sender': user.id,  # Usuario responsable del proyecto que rechaza la solicitud
+                'sender': user.id,  
                 'message': f"Tu solicitud al proyecto '{solicitud.id_project.name}' ha sido rechazada.",
                 'is_read': 0,
                 'created_at': timezone.now(),
-                'user_id': solicitud.id_user.id  # Usuario que aplicó al proyecto
+                'user_id': solicitud.id_user.id  
             }
             notification_serializer = NotificationSerializer(data=notification_data)
             
@@ -1961,12 +1934,11 @@ class ApplicationsViewSet(ViewSet): #(Applications Management)
             return Response({"error": "solicitud_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Verificar si la solicitud existe y pertenece al usuario autenticado
+
             solicitud = await sync_to_async(Solicitudes.objects.get)(id_solicitud=solicitud_id, id_user=user)
 
-            # Verificar si la solicitud ha sido rechazada o no
+
             if solicitud.status in ['Rechazado', 'Pendiente']:
-                # Si la solicitud está pendiente o ha sido rechazada, se permite eliminarla
                 await sync_to_async(solicitud.delete)()
                 return Response({"message": "Solicitud deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
             else:
