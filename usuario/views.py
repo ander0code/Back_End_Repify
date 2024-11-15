@@ -13,6 +13,7 @@ from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from usuario.models import Users,Projects,Solicitudes,Collaborations, Notifications, Forms, Achievements, UserAchievements
 from rest_framework.permissions import AllowAny ,IsAuthenticated
+from django.db import transaction
 import random
 
 from asgiref.sync import sync_to_async
@@ -117,36 +118,45 @@ class LoginViewSet(ViewSet): #(User Management)
     async def register(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
-        first_name = request.data.get("first_name") 
-        last_name = request.data.get("last_name")  
-        
+        first_name = request.data.get("first_name")
+        last_name = request.data.get("last_name")
+
         if not email or not password:
             return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
-        
-  
-        user = await sync_to_async(User.objects.create_user)(
-            username=email, email=email, password=password,first_name=first_name, last_name=last_name 
-            )
 
-        users_data = {
-            **request.data,  
-            'authuser': user.pk,  
-            'created_at': timezone.now().strftime('%Y-%m-%d')  
-        }
-        
-        users_serializer = CustomUserSerializer(data=users_data)
-        
-        if await sync_to_async(users_serializer.is_valid)(raise_exception=False):
-            await sync_to_async(users_serializer.save)()  
-            
+        try:
+
+            def create_user_transaction():
+                with transaction.atomic():
+
+                    user = User.objects.create_user(
+                        username=email, email=email, password=password, first_name=first_name, last_name=last_name
+                    )
+
+                    users_data = {
+                        **request.data,
+                        'authuser': user.pk,
+                        'created_at': timezone.now().strftime('%Y-%m-%d')
+                    }
+                    users_serializer = CustomUserSerializer(data=users_data)
+
+                    if users_serializer.is_valid(raise_exception=False):
+                        users_serializer.save()
+                        return user, users_serializer.data
+                    else:
+                        raise ValueError("Invalid CustomUser data")
+
+            user, user_data = await sync_to_async(create_user_transaction)()
+
             refresh = RefreshToken.for_user(user)
             return Response({
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
-                "user": users_serializer.data  
+                "user": user_data
             }, status=status.HTTP_201_CREATED)
-        
-        return Response(users_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
     @swagger_auto_schema(
         operation_summary="recuperar y crear la contraseña nueva del usuario",
