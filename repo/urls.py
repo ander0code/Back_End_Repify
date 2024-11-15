@@ -31,8 +31,7 @@ schema_view = get_schema_view(
       license=openapi.License(name="BSD License"),
    ),
    public=True,
-   permission_classes=(permissions.AllowAny,),
-   url='https://back-repify-340032812084.us-central1.run.app'
+   permission_classes=(permissions.AllowAny,)
 )
 
 urlpatterns = [
