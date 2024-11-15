@@ -195,13 +195,17 @@ REST_FRAMEWORK = {
 
 SWAGGER_SETTINGS = {
     'USE_SESSION_AUTH': False,
-    'PERSIST_AUTH': True,
     'DEFAULT_API_URL': 'https://back-repify-340032812084.us-central1.run.app',
+    'SUPPORTED_SUBMIT_METHODS': ['get', 'post', 'put', 'delete', 'patch'],
+    'PERSIST_AUTH': True,
     'SECURITY_DEFINITIONS': {
         'Bearer': {
             'type': 'apiKey',
             'name': 'Authorization',
             'in': 'header'
         }
-    }
+    },
+    'SCHEMA_URL': 'https://back-repify-340032812084.us-central1.run.app',
 }
+
+SECURE_SSL_REDIRECT = True
