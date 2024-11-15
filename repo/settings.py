@@ -190,6 +190,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://main.d15i3gj3zymvi2.amplifyapp.com", 
     "https://www.repify.fun",
     "https://repify.fun",
+    "https://repo-s7h0.onrender.com",
     "https://back-end-repify-340032812084.us-central1.run.app",
 ]
 
