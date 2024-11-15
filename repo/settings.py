@@ -184,7 +184,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://main.d15i3gj3zymvi2.amplifyapp.com", 
     "https://www.repify.fun",
     "https://repify.fun",
-    "https://back-repify-340032812084.us-central1.run.app"
+    "https://back-end-repify-340032812084.us-central1.run.app"
 ]
 
 REST_FRAMEWORK = {
@@ -195,7 +195,6 @@ REST_FRAMEWORK = {
 
 SWAGGER_SETTINGS = {
     'USE_SESSION_AUTH': False,
-    'DEFAULT_API_URL': 'https://back-repify-340032812084.us-central1.run.app',
     'SUPPORTED_SUBMIT_METHODS': ['get', 'post', 'put', 'delete', 'patch'],
     'PERSIST_AUTH': True,
     'SECURITY_DEFINITIONS': {
@@ -204,8 +203,7 @@ SWAGGER_SETTINGS = {
             'name': 'Authorization',
             'in': 'header'
         }
-    },
-    'SCHEMA_URL': 'https://back-repify-340032812084.us-central1.run.app',
+    }
 }
 
 SECURE_SSL_REDIRECT = True
