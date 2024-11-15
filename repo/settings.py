@@ -42,10 +42,11 @@ SECRET_KEY = env('SECRET_KEY')
 # DEBUG = env.bool('DEBUG', default=False)
 DEBUG = env.bool('DEBUG', default=False)
 
-ALLOWED_HOSTS = ['back-end-repify-340032812084.us-central1.run.app', 'repify.fun']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost','back-end-repify-340032812084.us-central1.run.app', 'repify.fun']
 
 CSRF_TRUSTED_ORIGINS = [
     "https://back-end-repify-340032812084.us-central1.run.app",
+    "http://back-end-repify-340032812084.us-central1.run.app",
     "https://repify.fun",
     "https://www.repify.fun",
 ]
