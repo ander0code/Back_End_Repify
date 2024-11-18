@@ -194,8 +194,8 @@ class LoginViewSet(ViewSet): #(User Management)
 
             reset_code = random.randint(100000, 999999)
 
-
-            user_profile = await sync_to_async(Users.objects.get)(authuser=user) 
+            user_profile = await sync_to_async(Users.objects.get)(authuser=user)
+            user_profile.reset_code = reset_code  # Aquí guardamos el código
             user_profile.reset_code_created_at = timezone.now()
             await sync_to_async(user_profile.save)()
 
