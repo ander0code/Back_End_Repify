@@ -1,23 +1,7 @@
 
-# 🐍 Backend con Django REST Framework
+# 🐍 Backend Repify con Django REST Framework
 
 Backend construido con Django REST Framework (DRF), utilizando PostgreSQL como base de datos y desplegado en Google Cloud Run con Docker.
-
-## 📋 Tabla de Contenidos
-
-- [Características](#características)
-- [Requisitos Previos](#requisitos-previos)
-- [Instalación](#instalación)
-- [Uso](#uso)
-- [Estructura del Proyecto](#estructura-del-proyecto)
-- [Variables de Entorno](#variables-de-entorno)
-- [API Endpoints](#api-endpoints)
-- [Pruebas](#pruebas)
-- [Despliegue](#despliegue)
-- [Contribuir](#contribuir)
-- [Licencia](#licencia)
-
----
 
 ## 🚀 Características
 
@@ -27,14 +11,26 @@ Backend construido con Django REST Framework (DRF), utilizando PostgreSQL como b
 - Desplegado en Google Cloud Run para escalabilidad y alta disponibilidad.
 - Autenticación basada en tokens (JWT o similar).
 
-## ⚙️ Requisitos Previos
+## 📚 Stack Tecnológico
 
-Antes de empezar, asegúrate de tener lo siguiente instalado:
+### 🖥️ Backend
+- **Lenguaje:** Python
+- **Framework:** Django REST Framework (DRF)
+- **Base de Datos:** PostgreSQL
+- **Serialización:** DRF serializers
+- **Validaciones y lógica de negocio:** Utilizando DRF y módulos nativos de Python.
 
-- Python `3.x`
-- Docker y Docker Compose
-- PostgreSQL (si quieres ejecutar una instancia local para desarrollo)
-- `pip` para gestionar paquetes de Python
+### 🔒 Autenticación
+- **Protocolo:** JSON Web Tokens (JWT) para autenticación basada en tokens.
+- **Gestión de usuarios:** Implementación de modelos personalizados de usuarios con DRF.
+
+### ☁️ Despliegue
+- **Contenerización:** Docker para empaquetar la aplicación.
+- **Servicio Cloud:** Google Cloud Run para el despliegue serverless.
+
+### 🧩 API y Documentación
+- **Documentación de la API:** DRF + herramientas como Swagger o Redoc.
+
 
 ## 🛠 Instalación
 
@@ -90,20 +86,22 @@ http://localhost:8000
 ## 📂 Estructura del Proyecto
 
 ```plaintext
-proyecto/
-├── app/                  # Aplicaciones Django
+BACK_END_REPIFY/
+├── usuario/                  # Aplicaciones Django
+|   ├── admin.py 
+|   ├── apps.py  
 │   ├── models.py         # Modelos de datos
 │   ├── serializers.py    # Serializadores de DRF
 │   ├── views.py          # Vistas de la API
 │   ├── urls.py           # Rutas de la aplicación
 │   └── tests/            # Pruebas unitarias
-├── proyecto/             # Configuración principal de Django
+├── repo/             # Configuración principal de Django
 │   ├── settings.py       # Configuración general
 │   ├── urls.py           # Rutas principales
 │   └── wsgi.py           # Configuración para WSGI
 ├── manage.py             # Herramienta de administración de Django
 ├── Dockerfile            # Configuración para construir el contenedor Docker
-├── docker-compose.yml    # Configuración de Docker Compose
+├── .dockerignore         # Configuración de Docker Compose
 └── requirements.txt      # Dependencias del proyecto
 ```
 
