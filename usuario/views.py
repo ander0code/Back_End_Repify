@@ -2143,26 +2143,24 @@ class CollaboratorsViewSet(ViewSet): #(Collaborators Management)
             return Response({"error": "Both project_id and user_id are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Verificar que el proyecto y el usuario existen
+
             project = await sync_to_async(Projects.objects.get)(id=project_id)
             user = await sync_to_async(Users.objects.get)(id=user_id)
 
-            # Verificar que la colaboración existe
+
             collaboration = await sync_to_async(Collaborations.objects.filter)(project=project, user=user)
             collaboration_instance = await sync_to_async(collaboration.first)()
             if not collaboration_instance:
                 return Response({"error": "Collaboration not found"}, status=status.HTTP_404_NOT_FOUND)
 
-            # Eliminar la colaboración
             await sync_to_async(collaboration_instance.delete)()
 
-            # Eliminar la solicitud asociada al proyecto y usuario
+
             solicitud = await sync_to_async(Solicitudes.objects.filter)(id_project=project, id_user=user)
             solicitud_instance = await sync_to_async(solicitud.first)()
             if solicitud_instance:
                 await sync_to_async(solicitud_instance.delete)()
 
-            # Crear la notificación para el usuario eliminado
             notification_data = {
                 'sender': request.user.id,  # Usuario autenticado (quien realiza la eliminación)
                 'message': f"Has sido eliminado como colaborador del proyecto '{project.name}'.",
