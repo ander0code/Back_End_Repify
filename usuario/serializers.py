@@ -22,7 +22,6 @@ class LoginSerializer(Serializer):
         if user is None:
             raise serializers.ValidationError('Invalid email or password.')
 
-        # Generar los tokens JWT
         refresh = RefreshToken.for_user(user)
         
         try:
@@ -43,7 +42,6 @@ class LoginSerializer(Serializer):
         except User.DoesNotExist:
             full_name = None  
 
-        # Retornar los tokens y los datos del usuario, incluyendo el ID
         return {
             'access': str(refresh.access_token),
             'refresh': str(refresh),
@@ -244,7 +242,7 @@ class ProjectUpdateSerializer(adrf.serializers.ModelSerializer):
         ]
         
 class ProfileSerializer(adrf.serializers.ModelSerializer):
-    # Campos de `authuser`
+
     email = serializers.EmailField(read_only=True)
     first_name = serializers.CharField(read_only=True)
     last_name = serializers.CharField(read_only=True)
@@ -254,7 +252,7 @@ class ProfileSerializer(adrf.serializers.ModelSerializer):
     class Meta:
         model = Users
         fields = ['university', 'career', 'cycle', 'biography','interests','photo', 'achievements', 'created_at', 
-                  'email', 'first_name', 'last_name', 'date_joined'] #11
+                  'email', 'first_name', 'last_name', 'date_joined'] 
 
 class FormSerializer(adrf.serializers.ModelSerializer):
 
