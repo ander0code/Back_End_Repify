@@ -1,6 +1,4 @@
-from django.shortcuts import render
 
-# Create your views here.
 from django.http import StreamingHttpResponse
 from asgiref.sync import sync_to_async
 

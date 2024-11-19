@@ -195,7 +195,7 @@ class LoginViewSet(ViewSet): #(User Management)
             reset_code = random.randint(100000, 999999)
 
             user_profile = await sync_to_async(Users.objects.get)(authuser=user)
-            user_profile.reset_code = reset_code  # Aquí guardamos el código
+            user_profile.reset_code = reset_code  
             user_profile.reset_code_created_at = timezone.now()
             await sync_to_async(user_profile.save)()
 
@@ -250,7 +250,7 @@ class LoginViewSet(ViewSet): #(User Management)
             user_profile = await sync_to_async(Users.objects.get)(authuser=user)
 
             if user_profile.reset_code == reset_code:
-                # Cambiar la contraseña
+  
                 user.set_password(new_password)
                 await sync_to_async(user.save)() 
                 
@@ -1242,7 +1242,7 @@ class UserAchievementsViewSet(ViewSet): #(UserAchievements Management)
     )
     @action(detail=False, methods=['POST'],  url_path='validate_achievements', permission_classes=[IsAuthenticated])
     def validate_achievements(self, request):
-        user = request.user  # Esto ya es la instancia del modelo 'Users'
+        user = request.user 
         unlocked_achievements = []
 
         try:
@@ -1250,7 +1250,6 @@ class UserAchievementsViewSet(ViewSet): #(UserAchievements Management)
             for achievement in achievements:
                 unlocked = False
 
-                # Aquí evalúa los criterios para desbloquear logros
                 if achievement.id == 1:  # Primera Gran Misión
                     unlocked = Projects.objects.filter(responsible=user.id).exists()
                 elif achievement.id == 2:  # Manos a la Obra
@@ -1347,10 +1346,8 @@ class UserAchievementsViewSet(ViewSet): #(UserAchievements Management)
         user = request.user
         user_achievements = UserAchievements.objects.filter(user=user.id)
         
-        # Obtener la foto del usuario
         user_photo = Users.objects.filter(authuser=user.id).values_list('photo', flat=True).first()
         
-        # Serializar los logros del usuario
         achievements_data = [
             {
                 "achievement": achievement.achievement.id,
@@ -1361,7 +1358,6 @@ class UserAchievementsViewSet(ViewSet): #(UserAchievements Management)
             for achievement in user_achievements
         ]
 
-        # Estructurar la respuesta final
         response_data = {
             "user": user.id,
             "first_name": user.first_name,
@@ -1412,11 +1408,9 @@ class UserAchievementsViewSet(ViewSet): #(UserAchievements Management)
             return Response({"error": "Usuario no encontrado."}, status=status.HTTP_400_BAD_REQUEST)
 
         user_achievements = UserAchievements.objects.filter(user=user.id)
-        
-        # Obtener la foto del usuario
+
         user_photo = user.photo if user.photo else None
 
-        # Serializar los logros del usuario
         achievements_data = [
             {
                 "achievement": achievement.achievement.id,
@@ -1427,7 +1421,6 @@ class UserAchievementsViewSet(ViewSet): #(UserAchievements Management)
             for achievement in user_achievements
         ]
 
-        # Estructurar la respuesta final
         response_data = {
             "user": user.id,
             "first_name": user.authuser.first_name,
@@ -1448,13 +1441,12 @@ class UserAchievementsViewSet(ViewSet): #(UserAchievements Management)
     )
     @action(detail=False, methods=['GET'], url_path='all_achievements', permission_classes=[IsAuthenticated])
     async def get_all_achievements(self, request):
-        # Obtener todos los logros de forma asincrónica
+
         achievements = await self.get_achievements()
         
         if not achievements:
             return Response({'detail': 'No se encontraron logros.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Serializar los logros
         serializer = AchievementsSerializer(achievements, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -1481,29 +1473,25 @@ class UserAchievementsViewSet(ViewSet): #(UserAchievements Management)
     async def get_all_achievements_id(self, request):
         user_id = request.data.get('user_id')
 
-        # Validar el ID del usuario
         if user_id is None:
             return Response({'detail': 'ID de usuario inválido.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Verificar si el usuario existe
         user_exists = await self.check_user_exists(user_id)
         
         if not user_exists:
             return Response({'detail': 'Usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Obtener todos los logros de forma asíncrona
         achievements = await self.get_all_achievements()
-        
-        # Serializar los logros
+
         serializer = AchievementsSerializer(achievements, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     async def check_user_exists(self, user_id):
-        # Verificar si el usuario existe
+
         return await sync_to_async(Users.objects.filter(id=user_id).exists)()
 
     async def get_all_achievements(self):
-        # Obtener todos los logros
+
         return await sync_to_async(list)(Achievements.objects.all())
     
 class ApplicationsViewSet(ViewSet): #(Applications Management)
@@ -1579,7 +1567,6 @@ class ApplicationsViewSet(ViewSet): #(Applications Management)
 
                 name_lider = f"{lider.first_name} {lider.last_name}"
 
-                # Crear la solicitud
                 solicitud_data = {
                     'id_user': user.id,
                     'name_lider': name_lider,
@@ -1597,7 +1584,6 @@ class ApplicationsViewSet(ViewSet): #(Applications Management)
                 if await sync_to_async(solicitud_serializer.is_valid)():
                     await sync_to_async(solicitud_serializer.save)()
                 
-                    # Crear la notificación para el propietario del proyecto
                     notification_data = {
                         'sender': user.id,  
                         'message': f"{user.first_name} {user.last_name} aplico al proyecto '{project.name}' ",
@@ -1675,13 +1661,13 @@ class ApplicationsViewSet(ViewSet): #(Applications Management)
             
             if await sync_to_async(collaboration_serializer.is_valid)():
                 await sync_to_async(collaboration_serializer.save)()
-                # Crear la notificación para el usuario que aplicó al proyecto
+
                 notification_data = {
-                    'sender': user.id,  # El usuario que acepta la solicitud
+                    'sender': user.id, 
                     'message': f"Tu solicitud al proyecto '{solicitud.id_project.name}' ha sido aceptada.",
                     'is_read': 0,
                     'created_at': timezone.now(),
-                    'user_id': solicitud.id_user.id  # Usuario que aplicó al proyecto
+                    'user_id': solicitud.id_user.id  
                 }
                 notification_serializer = NotificationSerializer(data=notification_data)
                 
@@ -1807,14 +1793,11 @@ class ApplicationsViewSet(ViewSet): #(Applications Management)
         user = request.user.id  
         
         try:
-                # Filtrar todas las solicitudes hechas por el usuario autenticado
                 solicitudes = await sync_to_async(list)(Solicitudes.objects.filter(id_user=user).order_by("-id_solicitud"))
 
-                # Verificar si el usuario tiene solicitudes
                 if not solicitudes:
                     return Response({"message": "No solicitudes found for this user"}, status=status.HTTP_404_NOT_FOUND)
 
-                # Serializar las solicitudes
                 serializer = await sync_to_async(SolicitudSerializer)(solicitudes, many=True)
                 return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -1891,12 +1874,10 @@ class ApplicationsViewSet(ViewSet): #(Applications Management)
             project = await sync_to_async(Projects.objects.get)(id=project_id)
             
             solicitudes = await sync_to_async(list)(Solicitudes.objects.filter(id_project=project).order_by("-id_solicitud"))
-            
-            # Serializar las solicitudes
+
             serializer = SolicitudSerializer(solicitudes, many=True)
             solicitudes_data = serializer.data
 
-            # Agregar la foto del usuario a cada solicitud
             for solicitud in solicitudes_data:
                 user = await sync_to_async(Users.objects.get)(id=solicitud['id_user'])
                 solicitud['photo'] = user.photo if user.photo else None
@@ -2008,7 +1989,6 @@ class NotificationsViewSet(ViewSet): #Notifiacions Management
         user = request.user
         
         try:
-            # Actualizar el campo isread de todas las notificaciones del usuario a 1
             await sync_to_async(Notifications.objects.filter(user_id=user.id).update)(is_read=1)
             return Response({"message": "Notificaciones marcadas como leídas"}, status=status.HTTP_200_OK)
         except Exception as e:
@@ -2031,13 +2011,12 @@ class CollaboratorsViewSet(ViewSet): #(Collaborators Management)
     )
     @action(detail=False, methods=['GET'], url_path='view_project_usercollab', permission_classes=[IsAuthenticated])
     async def view_project_usercollab(self, request):
-        # Obtener la instancia del usuario autenticado
-        user_instance = request.user.id  # Ajusta esto si tu relación es diferente
 
-        # Filtrar colaboraciones del usuario de forma asíncrona
+        user_instance = request.user.id  
+
         collaborations = await sync_to_async(list)(Collaborations.objects.filter(user=user_instance))
 
-        # Obtener los proyectos relacionados a las colaboraciones de forma asíncrona
+
         if collaborations:
             
             project_ids = await sync_to_async(lambda: [collab.project_id for collab in collaborations])()
@@ -2054,8 +2033,7 @@ class CollaboratorsViewSet(ViewSet): #(Collaborators Management)
                     name_responsible = await self.get_responsible_name_proyect(project)
 
                     collaboration_count = await self.get_collaboration_count_proyect(project)
-
-                    # Obtener la foto del responsable del proyecto
+                    
                     responsible_user = await sync_to_async(Users.objects.get)(id=project.responsible_id)
                     responsible_photo = responsible_user.photo if responsible_user.photo else None
 
@@ -2079,7 +2057,7 @@ class CollaboratorsViewSet(ViewSet): #(Collaborators Management)
                         'name_uniuser': project.name_uniuser,
                         'collaboration_count': collaboration_count,
                         'collaborators': collaborators_info,
-                        'responsible_photo': responsible_photo,  # Agregar la foto del responsable
+                        'responsible_photo': responsible_photo,  
                     }
                     response_data.append(project_data)
 
@@ -2142,32 +2120,30 @@ class CollaboratorsViewSet(ViewSet): #(Collaborators Management)
             return Response({"error": "Both project_id and user_id are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Verificar que el proyecto y el usuario existen
+
             project = await sync_to_async(Projects.objects.get)(id=project_id)
             user = await sync_to_async(Users.objects.get)(id=user_id)
 
-            # Verificar que la colaboración existe
+
             collaboration = await sync_to_async(Collaborations.objects.filter)(project=project, user=user)
             collaboration_instance = await sync_to_async(collaboration.first)()
             if not collaboration_instance:
                 return Response({"error": "Collaboration not found"}, status=status.HTTP_404_NOT_FOUND)
 
-            # Eliminar la colaboración
             await sync_to_async(collaboration_instance.delete)()
 
-            # Eliminar la solicitud asociada al proyecto y usuario
+
             solicitud = await sync_to_async(Solicitudes.objects.filter)(id_project=project, id_user=user)
             solicitud_instance = await sync_to_async(solicitud.first)()
             if solicitud_instance:
                 await sync_to_async(solicitud_instance.delete)()
 
-            # Crear la notificación para el usuario eliminado
             notification_data = {
-                'sender': request.user.id,  # Usuario autenticado (quien realiza la eliminación)
+                'sender': request.user.id,  
                 'message': f"Has sido eliminado como colaborador del proyecto '{project.name}'.",
                 'is_read': 0,
                 'created_at': timezone.now().strftime('%Y-%m-%d'),
-                'user_id': user.id  # Usuario eliminado del proyecto
+                'user_id': user.id  
             }
             notification_serializer = NotificationSerializer(data=notification_data)
 
@@ -2209,22 +2185,16 @@ class MetricsViewSet(ViewSet): #(Metrics Management)
     @action(detail=False, methods=['GET'], url_path='metrics', permission_classes=[IsAuthenticated])
     def metrics(self, request):
         user_id = request.user.id
-        # Contar proyectos en progreso
         projects_in_progress = Projects.objects.filter(status='En progreso',responsible_id=user_id).count()
         
-        # Contar logros desbloqueados
         unlocked_achievements = UserAchievements.objects.filter(user_id=user_id, unlocked=True).count()
         
-        # Contar proyectos finalizados
         completed_projects = Projects.objects.filter(status='Completado',responsible_id=user_id).count()
         
-        # Contar proyectos en los que el usuario es miembro
         member_projects = Collaborations.objects.filter(user_id=user_id).values('project').distinct().count()
-        
-        # Contar proyectos donde el usuario es líder
+
         leader_projects = Projects.objects.filter(responsible_id=user_id).count()
 
-        # Crear un diccionario con las métricas
         metrics = {
             "proyectos_en_progreso": projects_in_progress,
             "logros_desbloqueados": unlocked_achievements,
@@ -2270,24 +2240,18 @@ class MetricsViewSet(ViewSet): #(Metrics Management)
         if not user_id:
             return Response({"error": "user_id es requerido"}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Contar proyectos en progreso
         projects_in_progress = Projects.objects.filter(status='En progreso', responsible_id=user_id).count()
         
-        # Contar logros desbloqueados
         unlocked_achievements = UserAchievements.objects.filter(user_id=user_id, unlocked=True).count()
         
-        # Contar proyectos finalizados
         completed_projects = Projects.objects.filter(status='Completado', responsible_id=user_id).count()
-        
-        # Contar proyectos en los que el usuario es miembro
+
         member_projects = Collaborations.objects.filter(user_id=user_id).values('project').distinct().count()
-        
-        # Contar proyectos donde el usuario es líder
+
         leader_projects = Projects.objects.filter(responsible_id=user_id).count()
         
         photo =  Users.objects.filter(authuser_id=user_id).first()
 
-        # Crear un diccionario con las métricas
         metrics = {
             "photo" : photo.photo,
             "proyectos_en_progreso": projects_in_progress,
