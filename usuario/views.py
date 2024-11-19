@@ -2002,8 +2002,7 @@ class NotificationsViewSet(ViewSet): #Notifiacions Management
         ),
         status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response('Error interno del servidor'),
     },
-    tags=["Notifications Management"]
-)
+    tags=["Notifications Management"])
     @action(detail=False, methods=['PUT'], url_path='isread_notifications', permission_classes=[IsAuthenticated])
     async def isread_notifications(self, request):
         user = request.user
@@ -2177,7 +2176,7 @@ class CollaboratorsViewSet(ViewSet): #(Collaborators Management)
             else:
                 return Response(notification_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            return Response({"message": "Collaborator deleted and notified successfully"}, status=status.HTTP_204_NO_CONTENT)
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
         except Projects.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
