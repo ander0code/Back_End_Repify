@@ -26,6 +26,7 @@ Backend construido con Django REST Framework (DRF), utilizando PostgreSQL como b
 
 ### ☁️ Despliegue
 - **Contenerización:** Docker para empaquetar la aplicación.
+- **CI/CD:** Google Cloud Build para automatizar el proceso de construcción y despliegue.
 - **Servicio Cloud:** Google Cloud Run para el despliegue serverless.
 
 ### 🧩 API y Documentación
