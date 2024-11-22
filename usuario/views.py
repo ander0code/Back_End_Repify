@@ -1931,7 +1931,7 @@ class ApplicationsViewSet(ViewSet): #(Applications Management)
 
             if solicitud.status in ['Rechazado', 'Pendiente']:
                 await sync_to_async(solicitud.delete)()
-                return Response({"message": "Solicitud deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+                return Response(status=status.HTTP_204_NO_CONTENT)
             else:
                 return Response({"error": "Cannot delete a solicitud that has been accepted or is in another status"}, status=status.HTTP_400_BAD_REQUEST)
 
