@@ -1254,7 +1254,7 @@ class FormsViewSet(ViewSet): #(Form Management)
 
         await sync_to_async(form.delete)()
 
-        return Response({'detail': 'Formulario eliminado correctamente.'}, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     async def get_form(self, form_id):
         return await sync_to_async(Forms.objects.get)(id=form_id)
