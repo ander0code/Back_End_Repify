@@ -1,6 +1,8 @@
 from adrf.viewsets import ViewSet
+from rest_framework import serializers
 from django.contrib.auth.models import User
-from django.utils import timezone
+from django.utils.timezone import now
+from django.utils import timezone 
 from django.db.models import Count
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -15,6 +17,9 @@ from usuario.models import Users,Projects,Solicitudes,Collaborations, Notificati
 from rest_framework.permissions import AllowAny ,IsAuthenticated
 from django.db import transaction
 import random
+import logging
+
+logger = logging.getLogger(__name__)
 
 from asgiref.sync import sync_to_async
 
@@ -121,42 +126,68 @@ class LoginViewSet(ViewSet): #(User Management)
         first_name = request.data.get("first_name")
         last_name = request.data.get("last_name")
 
-        if not email or not password:
-            return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
+        logger.info("Inicio del registro de usuario.")  # Log del inicio del proceso
+
+        # Validar campos obligatorios
+        if not email or not password or not first_name or not last_name:
+            logger.warning("Faltan campos obligatorios en la solicitud.")
+            return Response({"error": "Email, password, first_name, and last_name are required."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-
-            def create_user_transaction():
+            async def create_user_transaction():
                 with transaction.atomic():
-
+                    # Crear usuario en auth_user
+                    logger.info("Creando usuario en auth_user.")
                     user = User.objects.create_user(
-                        username=email, email=email, password=password, first_name=first_name, last_name=last_name
+                        username=email,
+                        email=email,
+                        password=password,
+                        first_name=first_name,
+                        last_name=last_name
                     )
+                    logger.info(f"Usuario creado en auth_user con ID: {user.pk}")
 
-                    users_data = {
-                        **request.data,
-                        'authuser': user.pk,
-                        'created_at': timezone.now().strftime('%Y-%m-%d')
-                    }
-                    users_serializer = CustomUserSerializer(data=users_data)
+                    # Crear registro relacionado en users
+                    logger.info("Creando registro relacionado en la tabla users.")
+                    user_profile = Users.objects.create(
+                        authuser=user,
+                        university=request.data.get("university", ""),
+                        career=request.data.get("career", ""),
+                        cycle=request.data.get("cycle", ""),
+                        biography=request.data.get("biography", ""),
+                        photo=request.data.get("photo", ""),
+                        achievements=request.data.get("achievements", ""),
+                        interests=request.data.get("interests", []),
+                        created_at=now(),
+                    )
+                    logger.info(f"Registro en la tabla users creado para authuser ID: {user.pk}")
 
-                    if users_serializer.is_valid(raise_exception=False):
-                        users_serializer.save()
-                        return user, users_serializer.data
-                    else:
-                        raise ValueError("Invalid CustomUser data")
+                    return user, user_profile
 
-            user, user_data = await sync_to_async(create_user_transaction)()
+            user, user_profile = await sync_to_async(create_user_transaction)()
 
+            logger.info(f"Generando tokens JWT para el usuario ID: {user.pk}")
             refresh = RefreshToken.for_user(user)
+
+            # Respuesta exitosa
+            logger.info(f"Registro completado exitosamente para el usuario ID: {user.pk}")
             return Response({
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
-                "user": user_data
+                "user": {
+                    "authuser_id": user.pk,
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "university": user_profile.university,
+                    "career": user_profile.career,
+                    "cycle": user_profile.cycle,
+                },
             }, status=status.HTTP_201_CREATED)
 
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            logger.error(f"Error inesperado durante el registro: {str(e)}")
+            return Response({"error": "An unexpected error occurred."}, status=status.HTTP_400_BAD_REQUEST)
     
     @swagger_auto_schema(
         operation_summary="recuperar y crear la contraseña nueva del usuario",
