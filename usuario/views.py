@@ -126,9 +126,8 @@ class LoginViewSet(ViewSet): #(User Management)
         first_name = request.data.get("first_name")
         last_name = request.data.get("last_name")
 
-        logger.info("Inicio del registro de usuario.")  # Log del inicio del proceso
+        logger.info("Inicio del registro de usuario.")  
 
-        # Validar campos obligatorios
         if not email or not password or not first_name or not last_name:
             logger.warning("Faltan campos obligatorios en la solicitud.")
             return Response({"error": "Email, password, first_name, and last_name are required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -136,7 +135,7 @@ class LoginViewSet(ViewSet): #(User Management)
         try:
             def create_user_transaction():
                 with transaction.atomic():
-                    # Crear usuario en auth_user
+
                     logger.info("Creando usuario en auth_user.")
                     user = User.objects.create_user(
                         username=email,
@@ -147,7 +146,6 @@ class LoginViewSet(ViewSet): #(User Management)
                     )
                     logger.info(f"Usuario creado en auth_user con ID: {user.pk}")
 
-                    # Crear registro relacionado en users
                     logger.info("Creando registro relacionado en la tabla users.")
                     user_profile = Users.objects.create(
                         authuser=user,
@@ -164,14 +162,11 @@ class LoginViewSet(ViewSet): #(User Management)
 
                     return user, user_profile
 
-            # Ejecuta la transacción de forma asíncrona
             user, user_profile = await sync_to_async(create_user_transaction)()
 
-            # Generar tokens JWT
             logger.info(f"Generando tokens JWT para el usuario ID: {user.pk}")
             refresh = RefreshToken.for_user(user)
 
-            # Respuesta exitosa
             logger.info(f"Registro completado exitosamente para el usuario ID: {user.pk}")
             return Response({
                 "refresh": str(refresh),
