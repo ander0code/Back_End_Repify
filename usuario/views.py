@@ -134,7 +134,7 @@ class LoginViewSet(ViewSet): #(User Management)
             return Response({"error": "Email, password, first_name, and last_name are required."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            async def create_user_transaction():
+            def create_user_transaction():
                 with transaction.atomic():
                     # Crear usuario en auth_user
                     logger.info("Creando usuario en auth_user.")
@@ -164,8 +164,10 @@ class LoginViewSet(ViewSet): #(User Management)
 
                     return user, user_profile
 
+            # Ejecuta la transacción de forma asíncrona
             user, user_profile = await sync_to_async(create_user_transaction)()
 
+            # Generar tokens JWT
             logger.info(f"Generando tokens JWT para el usuario ID: {user.pk}")
             refresh = RefreshToken.for_user(user)
 
@@ -188,6 +190,7 @@ class LoginViewSet(ViewSet): #(User Management)
         except Exception as e:
             logger.error(f"Error inesperado durante el registro: {str(e)}")
             return Response({"error": "An unexpected error occurred."}, status=status.HTTP_400_BAD_REQUEST)
+
     
     @swagger_auto_schema(
         operation_summary="recuperar y crear la contraseña nueva del usuario",
