@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'drf_yasg',
+    'health',
     'usuario'
 ]
 
@@ -62,6 +63,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'middleware.health_check_middleware.HealthCheckMiddleware',
 ]
 
 ROOT_URLCONF = 'repo.urls'
@@ -88,7 +90,8 @@ WSGI_APPLICATION = 'repo.wsgi.application'
 DATABASES = {
     'default': dj_database_url.config(
         default=os.getenv('DATABASE_URL'),
-        conn_max_age=600  
+        conn_max_age=600,  
+        ssl_require=True  
     )
 }
 
