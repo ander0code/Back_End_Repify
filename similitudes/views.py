@@ -112,17 +112,16 @@ class SimilarUsersViewSet(ViewSet):
                         + F('university_similarity') * 0.1
                     ),
                 )
-                .filter(~Q(id=target_user.id), total_similarity__gte=0.1)  # Excluir usuarios con menos del 10% de similitud
-                .order_by('-total_similarity')[:10]  # Limitar a los 10 más similares
+                .filter(~Q(authuser=authenticated_user), total_similarity__gte=0.1)  
+                .order_by('-total_similarity')[:10] 
             )
 
-            # Construir respuesta con datos de auth_user y Users
             response_data = [
                 {
                     "user_id": user.id,
-                    "user_name": user.authuser.first_name + " " + user.authuser.last_name,  # Datos de auth_user
-                    "photo": user.photo,  # Foto desde Users
-                    "similarity": round(user.total_similarity, 2),  # Redondear a 2 decimales
+                    "user_name": user.authuser.first_name + " " + user.authuser.last_name,  
+                    "photo": user.photo,  
+                    "similarity": round(user.total_similarity, 2),  
                     "interests": user.interests,
                     "career": user.career,
                     "cycle": user.cycle,
