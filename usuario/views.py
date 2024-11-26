@@ -1,4 +1,5 @@
 from adrf.viewsets import ViewSet
+from spanlp.palabrota import Palabrota
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.utils.timezone import now
@@ -16,6 +17,8 @@ from django.shortcuts import get_object_or_404
 from usuario.models import Users,Projects,Solicitudes,Collaborations, Notifications, Forms, Achievements, UserAchievements
 from rest_framework.permissions import AllowAny ,IsAuthenticated
 from django.db import transaction
+from spanlp.palabrota import Palabrota
+from spanlp.domain.strategies import Preprocessing, TextToLower, RemoveAccents
 import random
 import logging
 
@@ -541,48 +544,7 @@ class ProjectViewSet(ViewSet): #(Projects Management)
             },
         ),
         responses={
-            status.HTTP_201_CREATED: openapi.Response(
-                'Project created successfully',
-                openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the created project'),
-                        'name': openapi.Schema(type=openapi.TYPE_STRING, description='Name of the project'),
-                        'description': openapi.Schema(type=openapi.TYPE_STRING, description='Description of the project'),
-                        'start_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='Start date of the project'),
-                        'end_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='End date of the project'),
-                        'status': openapi.Schema(type=openapi.TYPE_STRING, description='Current status of the project'),
-                        'project_type': openapi.Schema(
-                            type=openapi.TYPE_ARRAY,
-                            items=openapi.Items(type=openapi.TYPE_STRING),
-                            description="List of project types"
-                        ),
-                        'priority': openapi.Schema(type=openapi.TYPE_STRING, description='Priority level of the project'),
-                        'responsible': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the user responsible for the project'),
-                        'detailed_description': openapi.Schema(type=openapi.TYPE_STRING, description='Detailed description of the project'),
-                        'objectives': openapi.Schema(
-                            type=openapi.TYPE_ARRAY,
-                            items=openapi.Items(type=openapi.TYPE_STRING),
-                            description='List of objectives for the project'
-                        ),
-                        'necessary_requirements': openapi.Schema(
-                            type=openapi.TYPE_ARRAY,
-                            items=openapi.Items(type=openapi.TYPE_STRING),
-                            description='List of necessary requirements for the project'
-                        ),
-                        'progress': openapi.Schema(type=openapi.TYPE_INTEGER, description='Progress percentage of the project'),
-                        'accepting_applications': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Indicates if the project is accepting applications'),
-                        'type_aplyuni': openapi.Schema(type=openapi.TYPE_STRING, description='Application type for the project'),
-                        'creator_name': openapi.Schema(type=openapi.TYPE_STRING, description='Name of the project creator'),
-                        'collaboration_count': openapi.Schema(type=openapi.TYPE_INTEGER, description='Count of collaborations on the project'),
-                        'collaborators': openapi.Schema(
-                            type=openapi.TYPE_ARRAY,
-                            items=openapi.Items(type=openapi.TYPE_STRING),
-                            description="List of collaborator names"
-                        ),
-                    },
-                ),
-            ),
+            status.HTTP_201_CREATED: openapi.Response('Project created successfully'),
             status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid input data'),
         },
         tags=["Projects Management"]
@@ -591,11 +553,25 @@ class ProjectViewSet(ViewSet): #(Projects Management)
     async def create_project(self, request):
         responsible_user_id = request.user.id
 
+        # Configuración del detector de malas palabras
+        palabrota_detector = Palabrota()
+        preprocess_strategies = [TextToLower(), RemoveAccents()]
+
+        # Preprocesar texto y validar malas palabras
+        def preprocess_and_validate(value):
+            if isinstance(value, str):
+                # Preprocesar el texto
+                preprocessed_value = Preprocessing(data=value, clean_strategies=preprocess_strategies).clean()
+                # Verificar si contiene malas palabras
+                return palabrota_detector.contains_palabrota(preprocessed_value)
+            elif isinstance(value, list):
+                # Validar cada elemento de la lista
+                return any(preprocess_and_validate(item) for item in value)
+            return False
+
         try:
             custom_user = await sync_to_async(Users.objects.get)(authuser=responsible_user_id)
-
         except Users.DoesNotExist:
-
             return Response({"error": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
         project_data = request.data
@@ -603,14 +579,22 @@ class ProjectViewSet(ViewSet): #(Projects Management)
         project_data['name_uniuser'] = custom_user.university if custom_user.university else ""
         project_data['responsible'] = responsible_user_id
 
+        # Validar campos para detectar contenido inapropiado
+        for field in ['name', 'description', 'detailed_description', 'objectives', 'necessary_requirements']:
+            if field in project_data and preprocess_and_validate(project_data[field]):
+                return Response(
+                    {"error": "Esta acción no cumple con las políticas de contenido aceptable. Por favor, revise los datos ingresados y vuelva a intentarlo."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # Validar y guardar el proyecto
         project_serializer = ProjectSerializerCreate(data=project_data)
         if await sync_to_async(project_serializer.is_valid)():
-            await sync_to_async(project_serializer.save)()  
-
+            await sync_to_async(project_serializer.save)()
             return Response({"status": "Project created successfully"}, status=status.HTTP_201_CREATED)
 
         return Response(project_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    
     @swagger_auto_schema(
         operation_description="Actualizar un proyecto específico pasando el ID y los datos del proyecto en el cuerpo de la solicitud",
         request_body=openapi.Schema(
