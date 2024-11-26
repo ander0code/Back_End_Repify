@@ -7,15 +7,14 @@ from django.db.models.functions import Cast
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from usuario.models import Users
-
+from django.contrib.auth.models import User
 class SimilarUsersViewSet(ViewSet):
-    
+
     @swagger_auto_schema(
         operation_summary="Obtener usuarios similares",
         operation_description=(
             "Este endpoint devuelve una lista de usuarios similares basándose en los intereses, carrera, "
-            "ciclo y universidad del usuario autenticado. La similaridad se calcula con ponderaciones "
-            "(50% intereses, 20% carrera, 20% ciclo, 10% universidad)."
+            "ciclo y universidad del usuario autenticado. Excluye usuarios con menos del 10% de similitud."
         ),
         responses={
             200: openapi.Response(
@@ -26,20 +25,15 @@ class SimilarUsersViewSet(ViewSet):
                         "data": [
                             {
                                 "user_id": 2,
+                                "user_name": "John Doe",
+                                "photo": "https://example.com/photo.jpg",
                                 "similarity": 0.85,
                                 "interests": ["Python", "Django"],
                                 "career": "Ingeniería de Software",
                                 "cycle": "V",
                                 "university": "Universidad Autónoma"
                             },
-                            {
-                                "user_id": 3,
-                                "similarity": 0.75,
-                                "interests": ["JavaScript", "React"],
-                                "career": "Ingeniería de Software",
-                                "cycle": "V",
-                                "university": "Universidad Nacional"
-                            }
+                            ...
                         ]
                     }
                 },
@@ -75,20 +69,20 @@ class SimilarUsersViewSet(ViewSet):
     )
     @action(detail=False, methods=['GET'], url_path='similitud_user', permission_classes=[IsAuthenticated])
     def similar_users(self, request):
-
         try:
-
             authenticated_user = request.user.id
-            print(authenticated_user)
-            target_user = Users.objects.get(authuser=authenticated_user)
+
+            # Obtener al usuario autenticado desde la tabla Users
+            target_user = Users.objects.select_related('authuser').get(authuser=authenticated_user)
 
             target_interests_count = len(target_user.interests) if target_user.interests else 0
             if target_interests_count == 0:
                 return Response({"status": "error", "message": "User has no interests to compare."}, status=400)
 
+            # Calcular similitudes y filtrar por total_similarity >= 0.1
             users = (
-                Users.objects.annotate(
-
+                Users.objects.select_related('authuser')
+                .annotate(
                     interests_similarity=Cast(
                         Count('interests', filter=Q(interests__overlap=target_user.interests)), FloatField()
                     ) / Cast(Value(target_interests_count), FloatField()),
@@ -99,13 +93,11 @@ class SimilarUsersViewSet(ViewSet):
                         output_field=FloatField(),
                     ),
 
-
                     cycle_similarity=Case(
                         When(cycle=target_user.cycle, then=Value(1.0)),
                         default=Value(0.0),
                         output_field=FloatField(),
                     ),
-
 
                     university_similarity=Case(
                         When(university=target_user.university, then=Value(1.0)),
@@ -120,14 +112,17 @@ class SimilarUsersViewSet(ViewSet):
                         + F('university_similarity') * 0.1
                     ),
                 )
-                .filter(~Q(id=target_user.id))  
-                .order_by('-total_similarity')[:10] 
+                .filter(~Q(id=target_user.id), total_similarity__gte=0.1)  # Excluir usuarios con menos del 10% de similitud
+                .order_by('-total_similarity')[:10]  # Limitar a los 10 más similares
             )
 
+            # Construir respuesta con datos de auth_user y Users
             response_data = [
                 {
                     "user_id": user.id,
-                    "similarity": round(user.total_similarity, 2),  
+                    "user_name": user.authuser.first_name + " " + user.authuser.last_name,  # Datos de auth_user
+                    "photo": user.photo,  # Foto desde Users
+                    "similarity": round(user.total_similarity, 2),  # Redondear a 2 decimales
                     "interests": user.interests,
                     "career": user.career,
                     "cycle": user.cycle,
