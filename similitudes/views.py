@@ -33,7 +33,7 @@ class SimilarUsersViewSet(ViewSet):
                                 "cycle": "V",
                                 "university": "Universidad Autónoma"
                             },
-                            ...
+                        
                         ]
                     }
                 },
