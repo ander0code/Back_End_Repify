@@ -1,0 +1,17 @@
+#despues de haber instalado postgrest sql 
+# no se olvide de la contraseña de postgrest 
+
+#ANTES QUE TODO DEBES AGREGAR EN LOS PATHS LA CAPPETA BIN DE POSTGREST PARA PODER EJECUTAR SUS COMANDOS EN EL CMD
+
+
+-- esto comando lo ejecutamos en nuestro cmd despues de haber instalado postgrest
+
+createdb -U postgres -W repify_db
+
+-- para ejecutar nuestro script dopnde esta todo el esquema de base de datos 
+-- remplazamos <mi_base_de_datos> y colocomas el nuevo nombre que le pusimos <repify_db>
+-- en la ruta colocamos la ruta especifica de nuestro archivo Repify.sql 
+-- desde el explorador de archivo , abrir la carpeta del proyecto , click derecho proiedades y colocar la ruta 
+-- ejemplo > C:\Users\Usuario\Desktop\Back_End_Repify\Repify.sql 
+
+psql -U postgres -d repify_db -f C:\Scripts\Repify.sql 

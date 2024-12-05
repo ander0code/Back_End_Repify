@@ -1,0 +1,38 @@
+
+#para ello antes que todo debimos ya haber creo nuestra base de datos de postgrest y que 
+#ya tenga todas las tablas correspondientes 
+# como tambien ya haber creado nuestra variable de entorno <.env> que debe estar en la carpeta <repo>
+
+-- antes que todo debe crear su entorno virtual <.venv> , 
+-- presiona la tecla F1 y escribe Python Create Environment 
+-- elije Venv
+-- selecciona la version de python que utiliza
+-- marca que la instalacion incluya el archivo requirements.txt 
+-- espere
+
+#cuando termine ya tendra casi todo listo , faltaria activar el entorno virtual
+#dentro de la terminal de visual studio code seguira estos pasos 
+
+- cd .venv
+- cd Scripts
+- .\activate
+- cd ..
+- cd ..
+
+despues de haberlo hecho , escribe 
+
+- python manage.py migrate --fake 
+
+y por ultimo 
+
+- python manage.py runserver 
+
+y tendria listo el back-end funcionando
+
+
+
+
+
+
+
+

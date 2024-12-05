@@ -1,3 +1,4 @@
+#ANTES QUE TODO DEBES CREAR TU CUENTA DE DOCKER E INSTALAR EL DOCKER Desktop
 
 #crear imagen de docker
 # remplazas el nombre <andersonv05> por el nombre de tu cuenta de docker 

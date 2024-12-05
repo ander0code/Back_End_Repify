@@ -87,12 +87,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'repo.wsgi.application'
 
+DATABASE_URL = os.getenv('DATABASE_URL')
+is_local = 'localhost' in DATABASE_URL or '127.0.0.1' in DATABASE_URL
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL'),
-        conn_max_age=600,  
-        ssl_require=True  
+        default=DATABASE_URL,
+        conn_max_age=600,
+        ssl_require=not is_local
     )
 }
 
