@@ -1,0 +1,25 @@
+- Login
+https://127.0.0.1:8000/usuario/login/Login/
+{
+  "email": "mttitop@autonoma.edu.pe",
+  "password": "123456789"
+}
+
+- Register
+https://127.0.0.1:8000/usuario/login/Register/
+
+  {
+    "email": "mttitop@autonoma.edu.pe",
+    "password": "123456789",
+    "university": "Universidad Nacional de San Agustín",
+    "career": "Ingeniería de Minas",
+    "cycle": "III",
+    "biography": "Explorando los recursos minerales del Perú.",
+    "interests": ["Minería sostenible", "Geología"],
+    "photo": "",
+    "achievements": "Prácticas en yacimientos mineros",
+    "first_name": "Max",
+    "last_name": "Ttito"
+  }
+
+

@@ -1,0 +1,12 @@
+
+#crear imagen de docker
+# remplazas el nombre <andersonv05> por el nombre de tu cuenta de docker 
+# y lo demas deja como esta 
+
+docker build -t andersonv05/back_end_repify:0.0.0.1 .
+
+#antes de hacerle un push crea tu repositorio en docker gut con el mismo del proyecto <back_end_repify>
+
+#para subir tu imagen a tu repositorio de docker hud 
+❯ docker push andersonv05/back_end_repify:0.0.0.1  
+
