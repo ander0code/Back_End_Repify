@@ -22,4 +22,4 @@ COPY . .
 EXPOSE 8000
 
 # Comando para ejecutar la aplicación (desarrollo o producción)
-CMD ["gunicorn", "repo.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "repo.wsgi:application", "--bind", "0.0.0.0:8000",  "--skip-checks"]
