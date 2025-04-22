@@ -4,9 +4,9 @@ tenemos que crear un archivo .env dentro de la carpeta repo de nuestro proyecto 
 colocaremos lo siquiente , copiamos y pegamos 
 
 DEBUG=True
-SECRET_KEY='django-insecure-=l#cbzmrozb%cf1g#j7!mkolw6h2$0si+_)e+wyw&lbubcy^36'
+SECRET_KEY=''
 DATABASE_URL='postgresql://postgres:123456789@localhost/repify'
-EMAIL_HOST_PASSWORD='qtgy bdql nzxb crcw'
+EMAIL_HOST_PASSWORD=''
 
 ALLOWED_HOSTS=localhost,127.0.0.1
 CSRF_TRUSTED_ORIGINS=https://127.0.0.1
